@@ -28,7 +28,7 @@ class User(AbstractUser):
     isModerator = models.BooleanField(default=False)
     phone_number = models.CharField(default='', max_length = 18)
 
-    objects = UserManager
+    manages = UserManager
 
     class Meta:
         verbose_name = 'Пользователь'  # Имя модели в единственном числе
@@ -191,6 +191,7 @@ class User(AbstractUser):
             return None
         
         user_acc_password = Encryption.decrypt_data(user.base_password)
+        print(Encryption.decrypt_data(user.base_password))
 
         if user_acc_password != password: return None
 

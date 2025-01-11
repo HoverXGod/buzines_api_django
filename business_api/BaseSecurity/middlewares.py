@@ -1,6 +1,7 @@
 from .models import AuditLog
 from .utils import JWT_auth
 from django.utils.deprecation import MiddlewareMixin
+from django.contrib.auth.models import AnonymousUser
 
 class AuditLogMiddleware(MiddlewareMixin):
     def __init__(self, get_response=None):
@@ -25,11 +26,14 @@ class AuthenticationMiddleware(MiddlewareMixin):
         try:
             user = JWT_auth.jwt_to_user(jwt_token=token)
 
-            if JWT_auth.verify_jwt_token(): 
-                user.is_active = True    
-                request.user = user
-            
-            else: user.is_active = False
+            if JWT_auth.verify_jwt_token(token):
+                request.user = user 
+                user.is_active = True
+
+
+            else: 
+                request.user = AnonymousUser()
+                user.is_active = False
 
             user.save()            
     

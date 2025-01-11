@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from BaseSecurity.utils import JWT_auth
 from BaseSecurity.permissions import isAutorized, isSuperUser, isAdmin
 from BaseSecurity.services import SecureResponse
+from Encryption.utils import Encryption
 from .serializers import UserSerializer
 from Api_Keys.serializers import ApiKeySerializer
 from Api_Keys.models import Api_key
@@ -19,7 +20,8 @@ class RegisterUser(APIView):
         email = request.GET["email"]
         name = request.GET["name"]
 
-        answer = User.register_user(login=username, password=password, first_name=name)
+        try: answer = User.register_user(login=username, password=password, first_name=name)
+        except: return SecureResponse(request=request, data='', status=400)
 
         jwt_token = User.login_user_by_password(request, email=email, password=password)
 
@@ -46,8 +48,7 @@ class MyProfile(APIView):
     permission_classes = [isAutorized]
 
     def get(self, request):
-        jwt = JWT_auth.get_jwt(request)
-        user = JWT_auth.jwt_to_user(jwt_token=jwt)
+        user = request.user
 
         api_keys = Api_key.objects.filter(user=user)
 
@@ -135,7 +136,7 @@ class SetAdministratorUser(APIView):
 
         return SecureResponse(request=request, status=200)
     
-class SetModeratorrUser(APIView):
+class SetModeratorUser(APIView):
 
     serializer_class = UserSerializer
     permission_classes = [isAdmin]

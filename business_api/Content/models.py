@@ -45,7 +45,15 @@ class Post(models.Model):
             self.save()
 
         return self
+    
+    def update_image(self, image=''):
+        """Изменение/добавление изображений"""
+        
+        if image != '': 
+            self.images = image
+            self.save()
 
+        return self
     def del_post(self):
         """Удаление поста"""
         self.delete()

@@ -9,6 +9,6 @@ urlpatterns = [
     path('api/user/edit_profile', EditProfileUser.as_view()),
     path('api/user/set_super_user', SetSuperUser.as_view()),
     path('api/user/set_admin_user', SetAdministratorUser.as_view()),
-    path('api/user/set_moder_user', SetModeratorrUser.as_view()),
+    path('api/user/set_moder_user', SetModeratorUser.as_view()),
     path('api/user/delete', DeleteUser.as_view()),
 ] 

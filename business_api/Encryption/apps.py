@@ -8,4 +8,3 @@ class EncryptionConfig(AppConfig):
 
     def ready(self) -> None:
         pass
-
