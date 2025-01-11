@@ -89,16 +89,16 @@ class PageText(models.Model):
         
         return PageText.objects.all().last()
 
-    def update_page_text(self, index, text_new, page_name): 
+    def update_page_text(self, index, text, page_name): 
         """Обновляем текст по имени страницы и индексу"""
 
-        try: text = PageText.objects.get(index=index, page_name=page_name)
+        try: text_obj = PageText.objects.get(index=index, page_name=page_name)
         except: return None
 
-        text.text = text_new
-        text.save()
+        text_obj.text = text_new
+        text_obj.save()
 
-        return text
+        return text_obj
     
     @staticmethod
     def delete_page(page_name):
