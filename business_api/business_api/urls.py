@@ -2,7 +2,7 @@ from django.urls import path, include
 from drf_spectacular.views import SpectacularSwaggerView, SpectacularAPIView
 from django.contrib import admin
 from User.views import *
-
+from .settings import DEBUG
 
 urlpatterns = [       
     path('admin/', admin.site.urls),
@@ -14,3 +14,10 @@ urlpatterns = [
     path('', include('Content.urls')),
     path('', include('CRM.urls')),
 ]
+
+if DEBUG:
+    try:
+        import debug_toolbar
+        urlpatterns += [path(r'^__debug__/', include(debug_toolbar.urls))]
+    except ImportError:
+        pass
