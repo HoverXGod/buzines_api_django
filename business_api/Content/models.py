@@ -90,7 +90,7 @@ class PageText(models.Model):
         return PageText.objects.all().last()
 
     @staticmethod
-    def update_page_text(self, index, text, page_name): 
+    def update_page_text(index, text, page_name): 
         """Обновляем текст по имени страницы и индексу"""
 
         try: text_obj = PageText.objects.get(index=index, page_name=page_name)
@@ -110,7 +110,7 @@ class PageText(models.Model):
 
         texts_bufer = texts
 
-        for t in text: t.delete()
+        for t in texts: t.delete()
 
         return texts_bufer
 
