@@ -95,7 +95,7 @@ class PageText(models.Model):
         try: text_obj = PageText.objects.get(index=index, page_name=page_name)
         except: return None
 
-        text_obj.text = text_new
+        text_obj.text = text
         text_obj.save()
 
         return text_obj
