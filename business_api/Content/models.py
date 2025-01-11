@@ -89,6 +89,7 @@ class PageText(models.Model):
         
         return PageText.objects.all().last()
 
+    @staticmethod
     def update_page_text(self, index, text, page_name): 
         """Обновляем текст по имени страницы и индексу"""
 
