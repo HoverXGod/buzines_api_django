@@ -1,8 +1,12 @@
 from rest_framework import serializers
-from .models import Post
+from .models import Post, PageText
 from User.serializers import AuthorSerializer
 
-class PageTextSerializers(serializers.ModelSerializer): pass
+class PageTextSerializers(serializers.ModelSerializer): 
+    
+    class Meta:
+        model = PageText
+        fields = ['id', 'index', 'page_name', 'text']
 
 class PostSerializer(serializers.ModelSerializer):
 

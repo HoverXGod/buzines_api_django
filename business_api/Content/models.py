@@ -68,9 +68,60 @@ class PageText(models.Model):
     class Meta: pass
 
     @staticmethod
-    def get_page_text(index, page_name): pass
+    def get_page_texts(page_name): 
+        """Возвращает текст станицы по индексу"""
+        
+        try:
+            return PageText.objects.filter(page_name=page_name)
+        except: return None
+
 
     @staticmethod
-    def create_page_text(): pass
+    def create_page_text(index, text, page_name): 
+        """Создаём текст и сохраняем его с индексом и именем страницы"""
 
-    def update_page_text(self): pass
+        text = PageText(index=index, text=text, page_name=page_name)
+        
+        try: 
+            PageText.objects.get(index=index, page_name=page_name)
+            return None
+        except: text.save()
+        
+        return PageText.objects.all().last()
+
+    def update_page_text(self, index, text_new, page_name): 
+        """Обновляем текст по имени страницы и индексу"""
+
+        try: text = PageText.objects.get(index=index, page_name=page_name)
+        except: return None
+
+        text.text = text_new
+        text.save()
+
+        return text
+    
+    @staticmethod
+    def delete_page(page_name):
+        """Удаление всего текста привязанного к странице"""
+
+        try: texts = PageText.objects.filter(page_name=page_name)
+        except: return None
+
+        texts_bufer = texts
+
+        for t in text: t.delete()
+
+        return texts_bufer
+
+    @staticmethod
+    def delete_page_text(page_name, index):
+        """Удаление текста по имени страницы и индексу"""
+        
+        try: text = PageText.objects.get(index=index, page_name=page_name)
+        except: return None
+
+        text_bufer = text
+
+        text.delete()
+
+        return text_bufer

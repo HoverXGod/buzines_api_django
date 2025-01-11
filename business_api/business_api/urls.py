@@ -12,4 +12,5 @@ urlpatterns = [
     path('', include('User.urls')),
     path('', include('Api_Keys.urls')),
     path('', include('Content.urls')),
+    path('', include('CRM.urls')),
 ]

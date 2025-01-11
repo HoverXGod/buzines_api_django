@@ -115,7 +115,3 @@ class DeletePost(APIView):
         post.del_post()
 
         return SecureResponse(request=request, data=self.serializer_class(instance=post).data, status=200)
-
-
-
-class GetPagePosts(APIView): pass
