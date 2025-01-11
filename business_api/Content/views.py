@@ -67,10 +67,10 @@ class UpdatePost(APIView):
         text = request.GET['text']
         title = request.GET['title']
 
-        try: Post.objects.get(id=post_id)
+        try: post = Post.objects.get(id=post_id)
         except: return SecureResponse(request=request, data='', status=400)
 
-        post = Post.update_post(text=text, title=title)
+        post = post.update_post(text=text, title=title)
 
         return SecureResponse(request=request, data=self.serializer_class(instance=post).data, status=200)
 
@@ -84,6 +84,38 @@ class GetPosts(APIView):
 
         return SecureResponse(request=request, data=self.serializer_class(instance=posts, many=True).data, status=200)
 
-class AddImagePost(APIView): pass
+class AddImagePost(APIView): 
+    
+    serializer_class = PostSerializer
+    permission_classes = [isModerator, isAdmin]
+
+    def get(self, request):
+        post_id = request.GET['post_id']
+        images = request.GET['images']
+
+        try: post = Post.objects.get(id=post_id)
+        except: return SecureResponse(request=request, data='', status=400)
+
+        post = post.update_image(image=images)
+
+        return SecureResponse(request=request, data=self.serializer_class(instance=post).data, status=200)
+
+class DeletePost(APIView):
+    serializer_class = PostSerializer
+    permission_classes = [isSuperUser]
+
+    def get(self, request):
+        post_id = request.GET['post_id']
+
+        try: post = Post.objects.get(id=post_id)
+        except: return SecureResponse(request=request, data='', status=400)
+
+        bufer_post = post
+
+        post.del_post()
+
+        return SecureResponse(request=request, data=self.serializer_class(instance=post).data, status=200)
+
+
 
 class GetPagePosts(APIView): pass

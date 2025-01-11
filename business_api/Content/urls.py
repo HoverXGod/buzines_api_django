@@ -7,6 +7,7 @@ urlpatterns = [
     path('api/content/add_post', CreatePost.as_view()),
     path('api/content/edit_post', UpdatePost.as_view()),
     path('api/content/add_image', AddImagePost.as_view()),
+    path('api/content/delete_post', DeletePost.as_view(),)
 
 
 ]
