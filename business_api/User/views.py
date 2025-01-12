@@ -51,6 +51,8 @@ class MyProfile(APIView):
     def get(self, request):
         user = request.user
 
+        return 0/0
+
         api_keys = Api_key.objects.filter(user=user)
 
         return SecureResponse(request=request, data={ 'UserData': self.serializer_class(instance=user).data, 'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data}, status=200)

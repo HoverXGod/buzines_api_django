@@ -28,9 +28,7 @@ class AuditLog(models.Model):
     def _write_audit(request: HttpRequest, action: str, error: str = None):
         """Записываем аудит в базу данных"""
 
-        user = None
-        try: user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request=request))
-        except: pass
+        user = request.user
         SESSION = dict(request.session.items())
         COOKIES = request.COOKIES
         POST = request.POST.dict()
