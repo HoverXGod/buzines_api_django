@@ -1,4 +1,4 @@
-ALLOWED_HOSTS_LOCAL = ['localhost','127.0.0.1']
+ALLOWED_HOSTS_LOCAL = ['*']
 INSTALLED_APPS_LOCAL = [
     'debug_toolbar',
 ]
@@ -9,6 +9,7 @@ INTERNAL_IPS = [
     '127.0.0.1',
     'localhost',
     '0.0.0.0',
+    
 ]
 
 
