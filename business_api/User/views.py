@@ -26,7 +26,7 @@ class RegisterUser(APIView):
         jwt_token = User.login_user_by_password(request, email=email, password=password)
 
         if answer == None: return SecureResponse(request=request, status=400)
-        return SecureResponse(request=request, data={"JsonWebToken":str(jwt_token), "UserData": self.serializer_class(instance=answer).data}, status=200)
+        return SecureResponse(request=request, data={"JsonWebToken":jwt_token, "UserData": self.serializer_class(instance=answer).data}, status=200)
 
 class loginUser(APIView):
     
@@ -41,7 +41,7 @@ class loginUser(APIView):
 
         jwt_token = User.login_user_by_password(request, login=login, password=password)
         if jwt_token == None: return SecureResponse(request=request, status=400)
-        else: return SecureResponse(request=request, data={"JsonWebToken":str(jwt_token)})
+        else: return SecureResponse(request=request, data={"JsonWebToken":jwt_token})
 
 class MyProfile(APIView):
 
