@@ -27,9 +27,8 @@ class AuthenticationMiddleware(MiddlewareMixin):
             user = JWT_auth.jwt_to_user(jwt_token=token)
 
             if JWT_auth.verify_jwt_token(token):
-                request.user = user 
                 user.is_active = True
-
+                request.user = user 
 
             else: 
                 request.user = AnonymousUser()
