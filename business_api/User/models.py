@@ -77,10 +77,10 @@ class User(AbstractUser):
         return isStaff
     
     @property
-    def is_authenticated(self): return self.is_active
+    def is_authenticated(self): return True
     
     @property
-    def is_anonymous(self): return not self.is_active
+    def is_anonymous(self): return False
 
     @property
     def super_user(self) -> bool: return self.is_superuser 
