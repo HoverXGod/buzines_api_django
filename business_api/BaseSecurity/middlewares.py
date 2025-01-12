@@ -18,15 +18,19 @@ class AuthenticationMiddleware(MiddlewareMixin):
 
     def __call__(self, request):
         token = JWT_auth.get_jwt(request)
+        request.token = token
 
         try: 
             if JWT_auth.verify_jwt_token(token):
                 user = JWT_auth.jwt_to_user(jwt_token=token)
                 user.is_active = True
                 user.save()
-            
-            else: user = AnonymousUser()  
-        except: user = AnonymousUser()            
+            else: 
+                request.token = None
+                user = AnonymousUser()  
+        except: 
+            request.token = None
+            user = AnonymousUser()            
 
         request.user = user 
         return self.get_response(request)

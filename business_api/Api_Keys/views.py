@@ -13,9 +13,7 @@ class CreateApiKey(APIView):
     permission_classes = [isSuperUser]
 
     def get(self, request): 
-        user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request))
-
-        if user == None: return SecureResponse(request=request, status=400)
+        user = request.user
 
         key_name = 'SuperApiKey'
         help_text = f'Api-key of user: {user.username}'
@@ -39,11 +37,10 @@ class DeleteApiKey(APIView):
     def get(self, request):
         key_id = request.GET['key_id']
 
-        key = None
         try: key = Api_key.objects.get(id=key_id)
         except: return SecureResponse(request=request, status=400)
 
-        user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request))
+        user = request.user
 
         if key.user.id == user.id:
             key.del_key()
@@ -63,11 +60,10 @@ class UpdateApiKey(APIView):
         try: key_value = request.GET['key_value']
         except: pass
        
-        key = None
         try: key = Api_key.objects.get(id=key_id)
         except: return SecureResponse(request=request, status=400)
 
-        user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request))
+        user = request.user
 
         if key.user.id == user.id:
             key.del_key()
@@ -86,9 +82,7 @@ class ShowMyApiKeys(APIView):
     permission_classes = [isAutorized]
 
     def get(self, request):
-        user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request))
-
-        keys = None
+        user = request.user
 
         try: keys = Api_key.objects.filter(user=user)
         except: return SecureResponse(request=request, status=400)
@@ -102,9 +96,6 @@ class ShowUserApiKeys(APIView):
 
     def get(self, request):
         user_id = request.GET['user_id']
-
-        user = None
-        keys = None
 
         try: user = User.objects.get(id=user_id)
         except: return SecureResponse(request=request, status=400)
@@ -122,11 +113,10 @@ class DecryptKey(APIView):
     def get(self, request):
         key_id = request.GET['key_id']
 
-        key = None
         try: key = Api_key.objects.get(id=key_id)
         except: return SecureResponse(request=request, status=400)
 
-        user = JWT_auth.jwt_to_user(JWT_auth.get_jwt(request))
+        user = request.user
 
         if key.user.id == user.id:
             return SecureResponse(request=request, data={"DecryptKey": key.key}, status=200)

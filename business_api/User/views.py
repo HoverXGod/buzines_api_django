@@ -1,8 +1,7 @@
 from rest_framework.views import APIView
 from BaseSecurity.utils import JWT_auth
-from BaseSecurity.permissions import isAutorized, isSuperUser, isAdmin
+from BaseSecurity.permissions import isAutorized, isSuperUser, isAdmin, isAnonymous
 from BaseSecurity.services import SecureResponse
-from Encryption.utils import Encryption
 from .serializers import UserSerializer
 from Api_Keys.serializers import ApiKeySerializer
 from Api_Keys.models import Api_key
@@ -12,6 +11,7 @@ from .models import User
 class RegisterUser(APIView):
     
     serializer_class = UserSerializer
+    permission_classes = [isAnonymous]
 
     def get(self, request):
 
@@ -31,6 +31,7 @@ class RegisterUser(APIView):
 class loginUser(APIView):
     
     serializer_class = UserSerializer
+    permission_classes = [isAnonymous]
     
     def get(self, request):
         """Метод для входа в аккаунт, возвращает JWT Токен личной разработки, который активен именно в тот день, в который выдан"""
@@ -76,10 +77,8 @@ class EditProfileUser(APIView):
     permission_classes = [isAutorized]
 
     def get(self, request):
-        user_id = JWT_auth._decompile_jwt_token_list(JWT_auth.get_jwt(request))[0]
-        try:
-            user = User.objects.get(id=user_id)
-        except: return SecureResponse(request=request, status=400)
+        user = request.user
+        user_id = request.user.id
         
         phone_number = None
         password = None
@@ -157,7 +156,7 @@ class DeleteUser(APIView):
 
     def get(self, request):
         user_id = request.GET['user_id']
-        user = None
+        
         try:
             user = User.objects.get(id=user_id)
         except: return SecureResponse(request=request, status=400)

@@ -99,6 +99,7 @@ class JWT_auth:
     @staticmethod
     def verify_super_jwt(jwt_token: str) -> bool:
         """Проверям сходство пользователя с базой данных"""
+        
         from User.models import User
 
         jwt_list = JWT_auth._decompile_jwt_token_list(jwt_token=jwt_token)
