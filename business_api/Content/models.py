@@ -65,7 +65,9 @@ class PageText(models.Model):
     text = models.TextField()
     page_name = models.CharField(max_length=64)
 
-    class Meta: pass
+    class Meta: 
+        verbose_name = 'Текст страницы'  # Имя модели в единственном числе
+        verbose_name_plural = 'Тексты страницы'  # Имя модели во множественном числе
 
     @staticmethod
     def get_page_texts(page_name): 

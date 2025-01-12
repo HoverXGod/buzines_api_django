@@ -1,7 +1,6 @@
 from django.db import models
 from django.http import HttpRequest
 from User.models import User
-from .utils import JWT_auth
 
 class AuditLog(models.Model):
     """Модель аудита, нужен для отладки и проверки пользователей"""
@@ -45,11 +44,18 @@ class AuditLog(models.Model):
             "ERROR": error
         }
 
-        audit = AuditLog(
-            user=user,
-            action=action,
-            details=details,
-        )
+        if request.user.is_anonymous: 
+
+            audit = AuditLog(
+                action=action,
+                details=details,
+            )
+        else: 
+            audit = AuditLog(
+                user=user,
+                action=action,
+                details=details,
+            )
 
         audit.save()
 

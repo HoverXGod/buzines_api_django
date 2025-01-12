@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
 from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
+from datetime import datetime
 
 class UserManager(BaseUserManager):
 
@@ -14,8 +15,6 @@ class UserManager(BaseUserManager):
         user.is_superuser = True
         user.get_user_api().name_key = "SuperApiKey"
         return user
-    
-    def change_password(): pass
 
 
 class User(AbstractUser):   
@@ -28,7 +27,7 @@ class User(AbstractUser):
     isModerator = models.BooleanField(default=False)
     phone_number = models.CharField(default='', max_length = 18)
 
-    manages = UserManager
+    UserManager = UserManager
 
     class Meta:
         verbose_name = 'Пользователь'  # Имя модели в единственном числе
@@ -191,8 +190,12 @@ class User(AbstractUser):
             return None
         
         user_acc_password = Encryption.decrypt_data(user.base_password)
-        print(Encryption.decrypt_data(user.base_password))
 
         if user_acc_password != password: return None
 
-        return JWT_auth.compile_jwt_token(user) 
+        jwt_token = JWT_auth.compile_jwt_token(user) 
+
+        user.last_login = datetime.now().__str__()
+        user.save()
+
+        return jwt_token
