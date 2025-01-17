@@ -141,14 +141,19 @@ class JWT_auth:
         """Получение JWT или JAT токена из request"""
 
 
-        try: return request.session['JsonWebToken']
+        try: 
+            return request.session['JsonWebToken'] if request.session['JsonWebToken'] != None else 0/0
         except:
-            try: return request.GET['JsonWebToken']
+            try: 
+                return request.GET['JsonWebToken']
+                
             except: 
-                try:
-                    from Api_Keys.utils import ApiManager
-                    return ApiManager.get_api_key(api_key=request.GET['api_key'])._generate_jat()
-                except: return None
+                try: return request.POST['JsonWebToken']
+                except: 
+                    try:
+                        from Api_Keys.utils import ApiManager
+                        return ApiManager.get_api_key(api_key=request.GET['api_key'])._generate_jat()
+                    except: return None
 
     @staticmethod 
     def get_jwt_super(request) -> str:

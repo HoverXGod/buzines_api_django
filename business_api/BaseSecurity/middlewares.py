@@ -1,3 +1,4 @@
+from BaseSecurity.services import SessionManager
 from .models import AuditLog
 from .utils import JWT_auth
 from django.utils.deprecation import MiddlewareMixin
@@ -19,21 +20,24 @@ class AuthenticationMiddleware(MiddlewareMixin):
 
     def __call__(self, request):
         token = JWT_auth.get_jwt(request)
-        request.token = token
+        if token == None:
+            user = AnonymousUser()  
+            return self.get_response(request)
+
+        sm = SessionManager(request)
+        sm.auth__token(token)
         
-        if DEBUG: request.session['JsonWebToken'] = token
+        if JWT_auth.verify_jwt_token(token):
+            user = JWT_auth.jwt_to_user(jwt_token=token)
+            user.is_active = True
+            user.save()
+            sm.auth__session()
 
-        try: 
-            if JWT_auth.verify_jwt_token(token):
-                user = JWT_auth.jwt_to_user(jwt_token=token)
-                user.is_active = True
-                user.save()
-            else: 
-                request.token = None
-                user = AnonymousUser()  
-        except: 
+        else: 
             request.token = None
-            user = AnonymousUser()            
-
-        request.user = user 
+            user = AnonymousUser()              
+        
+        sm.auth__user(user)
+        request = sm.get_request()
+        del sm
         return self.get_response(request)
