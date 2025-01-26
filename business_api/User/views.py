@@ -87,19 +87,19 @@ class EditProfileUser(APIView):
         old_password = None
 
         try: phone_number = request.GET['phone_number']
-        except: pass
+        except: phone_number = None
         try: password = request.GET['password']
-        except: pass
+        except: password = None
         try: username = request.GET['username']
-        except: pass
+        except: username = None
         try: email = request.GET['email']
-        except: pass
+        except: email = None
         try: old_password = request.GET['old_password']
-        except: pass
+        except: old_password = None
         try: first_name = request.GET['first_name']
-        except: pass
+        except: first_name = None
         try: last_name = request.GET['last_name']
-        except: pass
+        except: last_name = None
 
         answer = user.edit_profile(last_name=last_name, first_name=first_name, name=username, old_pasword=old_password, password=password, email=email, phone_number=phone_number)
         if answer: 

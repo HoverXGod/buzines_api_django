@@ -104,16 +104,13 @@ class Product(models.model):
         return pr
         
 
-    def update_product(self, image=None, name=None, description=None, price=None, weight=None, weight_start=None, weight_end=None): 
+    def update_product(self, image=None, name=None, description=None, price=None): 
         """Обновление данных продукта и добавление изображения к товару"""
         
         try:
             if name != None: self.name = name
             if description != None: self.description = description
             if price != None: self.price = price
-            if weight != None: self.weight = weight
-            if weight_start != None: self.weight_start = weight_start
-            if weight_end != None: self.weight_end = weight_end
             if image != None: self.image = image
         except: return None
         
