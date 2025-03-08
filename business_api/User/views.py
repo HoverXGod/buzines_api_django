@@ -84,10 +84,13 @@ class EditProfileUser(APIView):
         password = None
         username = None
         email = None
+        addres = None
         old_password = None
 
         try: phone_number = request.GET['phone_number']
         except: phone_number = None
+        try: addres = request.GET['addres']
+        except: addres = None
         try: password = request.GET['password']
         except: password = None
         try: username = request.GET['username']
@@ -101,7 +104,7 @@ class EditProfileUser(APIView):
         try: last_name = request.GET['last_name']
         except: last_name = None
 
-        answer = user.edit_profile(last_name=last_name, first_name=first_name, name=username, old_pasword=old_password, password=password, email=email, phone_number=phone_number)
+        answer = user.edit_profile(addres=addres, last_name=last_name, first_name=first_name, name=username, old_pasword=old_password, password=password, email=email, phone_number=phone_number)
         if answer: 
             user = User.objects.get(id=user_id)
             return SecureResponse(request=request, data={"UserData": self.serializer_class(instance=user).data}, status=200)

@@ -26,6 +26,7 @@ class User(AbstractUser):
     isAdministrator = models.BooleanField(default=False)
     isModerator = models.BooleanField(default=False)
     phone_number = models.CharField(default='', max_length = 18)
+    addres = models.TextField(max_length=256)
 
     UserManager = UserManager
 
@@ -122,11 +123,12 @@ class User(AbstractUser):
 
         return True
 
-    def edit_profile(self, first_name=None, last_name=None, old_pasword=None, password=None, email=None, phone_number=None) -> bool: 
+    def edit_profile(self, addres=None, first_name=None, last_name=None, old_pasword=None, password=None, email=None, phone_number=None) -> bool: 
         """Метод изменения данных пользователя, не имеет никаких проверок, просто изменяет данные"""
 
         if first_name != None: self.first_name = first_name
         if last_name != None: self.last_name = last_name
+        if addres != None: self.addres = addres
 
         if password != None:
             if old_pasword != None:
