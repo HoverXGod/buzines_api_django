@@ -1,5 +1,4 @@
 from rest_framework.views import APIView
-from BaseSecurity.utils import JWT_auth
 from BaseSecurity.permissions import isAutorized, isSuperUser, isAdmin, isAnonymous
 from BaseSecurity.services import SecureResponse
 from .serializers import UserSerializer

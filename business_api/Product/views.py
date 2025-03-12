@@ -96,7 +96,7 @@ class CreateProduct(APIView):
             name = request.GET['name']
             description = request.GET['description']
             price = request.GET['price']
-            category = request.GET['category_name']
+            category = Category.objects.get(name=request.GET['category_name'])
 
             if int(weigth) == 1:
                 weight = request.GET['weight']

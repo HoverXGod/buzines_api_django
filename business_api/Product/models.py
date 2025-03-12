@@ -1,4 +1,6 @@
 from django.db import models
+from User.models import User
+from .serializers import UserCartSerializer, ProductCartSerializer
 
 class Category(models.Model):
     """Модель категори к которой относятся товары"""
@@ -136,3 +138,32 @@ class Product(models.model):
         bufer = self
         self.delete()
         return bufer
+    
+class Cart(models.Model):
+    """Хранение товаров пользователей"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    time_add = models.DateTimeField(auto_now=True)
+
+    @staticmethod
+    def get_user_cart(user):
+        """Возвращает полный перечень товаров пользователя"""
+
+        try: 
+             return Cart.objects.all(user=user)
+        except: return None
+
+    @staticmethod
+    def clear_user_cart(user): return
+
+    @staticmethod
+    def add_product_in_cart(product, user): return
+
+    @staticmethod
+    def get_all_cart__product(product):
+        """Возвращает полный перечень пользователей с этим товаром в корзине"""
+
+        try: 
+            return Cart.objects.all(product=product)
+        except: return None
