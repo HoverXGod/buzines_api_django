@@ -146,6 +146,11 @@ class Cart(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     time_add = models.DateTimeField(auto_now=True)
 
+    class Meta:
+        verbose_name = 'Коризна'  # Имя модели в единственном числе
+        verbose_name_plural = 'Корзины'  # Имя модели во множественном числе
+
+
     @staticmethod
     def get_user_cart(user):
         """Возвращает полный перечень товаров пользователя"""
@@ -153,6 +158,23 @@ class Cart(models.Model):
         try: 
              return Cart.objects.all(user=user)
         except: return None
+
+    @staticmethod
+    def get_user_cart_id(user) -> str:
+        """Возвращает полный перечень товаров пользователя в виде их id через запятую"""
+
+        try: 
+            cart = Cart.objects.all(user=user)
+        except: return None
+
+        cart = UserCartSerializer(instance=cart).data
+        
+        temp_list = list()
+        
+        for x in cart: temp_list.append(x['id'])
+        
+        return ",".join(temp_list)
+
 
     @staticmethod
     def clear_user_cart(user): return
@@ -167,3 +189,36 @@ class Cart(models.Model):
         try: 
             return Cart.objects.all(product=product)
         except: return None
+
+class Promotion(models.model):
+    """"""
+    
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    discount = models.FloatField(max_length=100)
+    description = models.TextField(max_length=512, default="Base")
+    name = models.CharField(max_length=64, default="Base")
+
+    class Meta:
+        verbose_name = 'Акция'  # Имя модели в единственном числе
+        verbose_name_plural = 'Акции'  # Имя модели во множественном числе
+
+
+    ...
+
+class PersonalDiscount(models.model):
+    """"""
+    
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, null=True)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    discount = models.FloatField(max_length=100)
+    description = models.TextField(max_length=512, default="Base")
+    name = models.CharField(max_length=64, default="Base")
+
+    class Meta:
+        verbose_name = 'Персональная скидка'  # Имя модели в единственном числе
+        verbose_name_plural = 'Персональные скидки'  # Имя модели во множественном числе
+
+
+    ...

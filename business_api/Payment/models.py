@@ -9,6 +9,11 @@ class Payment(models.model):
     cost = models.IntegerField(max_length=16)
     payment_id = models.CharField(max_length=128)
 
+    class Meta:
+        verbose_name = 'Платёж'  # Имя модели в единственном числе
+        verbose_name_plural = 'Платежи'  # Имя модели во множественном числе
+
+
     @property
     def is_payment(self) -> bool: return True if self.status == "succesful" else False
 
