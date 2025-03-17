@@ -61,6 +61,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
 
     'BaseSecurity.middlewares.AuthenticationMiddleware',
     'BaseSecurity.middlewares.AuditLogMiddleware',
@@ -78,6 +79,14 @@ AUTHENTICATION_BACKENDS = ('BaseSecurity.backends.AuthenticateLogin',
                            'BaseSecurity.backends.AuthenticateToken',)
 
 AUTH_USER_MODEL = 'User.User'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Hover Cloude API',
+    'DESCRIPTION': 'Парящее облачное API для вашего интернет-магазина',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    # OTHER SETTINGS
+}
 
 TEMPLATES = [
     {

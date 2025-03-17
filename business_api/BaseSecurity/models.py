@@ -28,10 +28,15 @@ class AuditLog(models.Model):
         """Записываем аудит в базу данных"""
 
         user = request.user
-        SESSION = dict(request.session.items())
+        session = dict(request.session.items())
         COOKIES = request.COOKIES
         POST = request.POST.dict()
         GET = request.GET.dict()
+
+        try: del session['_menus']
+        except: pass
+
+        SESSION = session
 
         action = "".join(action.split("?")[0])
 

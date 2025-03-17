@@ -6,18 +6,55 @@ from Api_Keys.serializers import ApiKeySerializer
 from Api_Keys.models import Api_key
 from .models import User
 
+from drf_spectacular.settings import spectacular_settings
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.views import AUTHENTICATION_CLASSES
+
+
 
 class RegisterUser(APIView):
     
     serializer_class = UserSerializer
     permission_classes = [isAnonymous]
 
-    def get(self, request):
+    url_name = 'schema'
+    url = None
+    title = spectacular_settings.TITLE
+
+    @extend_schema(
+                summary="Регистрация",
+                description='Метод для регистрации нового пользователя',
+                auth=None,
+                operation_id="Регистрация",
+                request=UserSerializer,
+                responses=UserSerializer,
+                parameters=[
+                    OpenApiParameter(
+                        name="password",
+                        required=True,
+                        ),
+                    OpenApiParameter(
+                        name="login",
+                        required=True
+                        ),
+                    OpenApiParameter(
+                        name="email",
+                        required=True
+                        ),
+                    OpenApiParameter(
+                        name="name",
+                        required=False
+                        ),
+                    
+                    ]
+                )
+    def post(self, request):
 
         password = request.GET["password"]
         username = request.GET["login"]
         email = request.GET["email"]
-        name = request.GET["name"]
+        try: name = request.GET["name"]
+        except: pass
 
         try: answer = User.register_user(login=username, password=password, first_name=name)
         except: return SecureResponse(request=request, data='', status=400)
@@ -26,6 +63,7 @@ class RegisterUser(APIView):
 
         if answer == None: return SecureResponse(request=request, status=400)
         return SecureResponse(request=request, data={"JsonWebToken":jwt_token, "UserData": self.serializer_class(instance=answer).data}, status=200)
+
 
 class loginUser(APIView):
     

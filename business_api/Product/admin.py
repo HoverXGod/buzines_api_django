@@ -27,7 +27,7 @@ class PromotionAdmin(admin.ModelAdmin):
 
 @admin.register(PersonalDiscount)
 class PersonalDiscountyAdmin(admin.ModelAdmin): 
-    list_display = ['id', 'user', 'discount', 'product', 'description', 'name', 'on_start']
+    list_display = ['id', 'user', 'discount', 'product__name', 'description', 'name', 'on_start']
     search_fields = ['id', 'user', 'product', 'name', 'discount', 'on_start']
     readonly_fields = ['id']
 
