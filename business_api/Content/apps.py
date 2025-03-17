@@ -4,5 +4,5 @@ from django.apps import AppConfig
 class ContentConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
     name = 'Content'
-    verbose_name = 'Content Application'
+    verbose_name = 'Менеджер Контента'
     ordering = ['BaseSecurity', 'User']

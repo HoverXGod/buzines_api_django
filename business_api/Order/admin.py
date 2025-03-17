@@ -1,7 +1,7 @@
 from django.contrib import admin
-from .models import Product
+from .models import Order
 
-@admin.register(Product)
+@admin.register(Order)
 class PageTextAdmin(admin.ModelAdmin): 
     list_display = ['id', 'payment', 'user', 'date', 'dilivery', 'products']
     search_fields = ['id', 'payment', 'user', 'date', 'dilivery', 'products']

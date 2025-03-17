@@ -32,6 +32,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -44,8 +45,12 @@ INSTALLED_APPS = [
     'BaseSecurity',
     'Content',
     'CRM',
+    'Product',
+    'Payment',
+    'Order',
     'rest_framework',
     'drf_spectacular',
+    
 ]
 
 MIDDLEWARE = [

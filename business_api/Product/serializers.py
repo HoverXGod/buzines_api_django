@@ -48,7 +48,7 @@ class PromotionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Promotion
-        fields = ['id', 'discount', 'category', 'product', 'description', 'name']
+        fields = ['id', 'discount', 'product', 'description', 'name', 'on_start']
 
 class PersonalDiscountSerializer(serializers.ModelSerializer):
     
@@ -57,5 +57,11 @@ class PersonalDiscountSerializer(serializers.ModelSerializer):
     category = CategorySerializer
 
     class Meta:
-        model = Promotion
-        fields = ['id', 'user', 'discount', 'category', 'product', 'description', 'name']
+        model = PersonalDiscount
+        fields = ['id', 'user', 'discount', 'product', 'description', 'name', 'on_start']
+
+class PromoCodeSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Promocode
+        fields = ['id', 'code', 'discount']

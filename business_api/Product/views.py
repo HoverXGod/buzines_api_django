@@ -1,8 +1,8 @@
 from rest_framework.views import APIView
-from BaseSecurity.permissions import isSuperUser
+from BaseSecurity.permissions import isSuperUser, isAutorized
 from BaseSecurity.services import SecureResponse
-from .serializers import CategorySerializer, ProductSerializer
-from .models import Category, Product
+from .serializers import *
+from .models import *
 
 class GetProductsCategory(APIView): 
     
@@ -174,6 +174,284 @@ class GetAllCategorys(APIView):
                     instance=Category.objects.filter(is_active=True),
                     many=True
                     ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class CreatePromotion(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = PromotionSerializer
+
+    def get(self, request):
+
+        product = Product.objects.get(id=request.GET['product_id'])
+        discount = request.GET['discount']
+        description = request.GET['description']
+        name = request.GET['name']
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Promotion.create_promotion(
+                        product=product,
+                        discount=discount,
+                        description=description,
+                        name=name,
+                        )
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class CreatePersonalDiscount(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = PersonalDiscountSerializer
+
+    def get(self, request):
+
+        product = Product.objects.get(id=request.GET['product_id'])
+        discount = request.GET['discount']
+        description = request.GET['description']
+        name = request.GET['name']
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=PersonalDiscount.create_personal_discount(
+                        user=request.user,
+                        product=product,
+                        discount=discount,
+                        description=description,
+                        name=name,
+                        )
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class CreatePromocode(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = PromoCodeSerializer
+
+    def get(self, request):
+
+        code = request.GET['promocode']
+        discount = request.GET['discount']
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Promocode.create_promo(
+                        code=code,
+                        discount=discount
+                        ),
+                    many=True
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class AddProductInCart(APIView): 
+    
+    permission_classes = []
+    serializer_class = CartSerializer
+
+    def get(self, request):
+
+        product = Product.objects.get(id=request.GET['product_id'])
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Cart.add_product_in_cart(
+                        user=request.user,
+                        product=product
+                        )
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class GetAllPromotions(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = PromotionSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Promotion.get_all_promotions(),
+                    many=True,
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class GetPersonalDiscount(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = PersonalDiscountSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=PersonalDiscount.get_user_personal_discount(request.user)
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+
+class GetUserCart(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = UserCartSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Cart.get_user_cart(request.user)
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class GetPromocode(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = PromoCodeSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data=self.serializer_class(
+                    instance=Promocode.get_promo(request.GET['promocode'])
+                    ).data,
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class DeletePromotion(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = None
+
+    def get(self, request):
+
+        try:
+
+            object = Promotion.objects.get(id=request.GET['id'])
+
+            object.delete_promotion()
+
+            return SecureResponse(
+                request=request, 
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class DeletePersonalDiscount(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = None
+
+    def get(self, request):
+
+        try:
+
+            object = PersonalDiscount.objects.get(id=request.GET['id'])
+
+            object.delete_personal_discount()
+
+            return SecureResponse(
+                request=request, 
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class DeletePromocde(APIView): 
+    
+    permission_classes = [isSuperUser]
+    serializer_class = None
+
+    def get(self, request):
+
+        try:
+
+            object = Promocode.objects.get(id=request.GET['id'])
+
+            Promocode.DeletePromocde()
+
+            return SecureResponse(
+                request=request, 
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class RemoveProductInUserCart(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = None
+
+    def get(self, request):
+
+        try:
+
+            object = Cart.objects.get(id=request.GET['id'], user=request.user)
+
+            object.delete()
+
+            return SecureResponse(
+                request=request, 
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class RemoveUserCart(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = None
+
+    def get(self, request):
+
+        try:
+
+            objects = Cart.objects.get(user=request.user)
+
+            for x in objects: x.delete()
+
+            return SecureResponse(
+                request=request, 
                 status=200
                 )
         except: 

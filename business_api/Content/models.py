@@ -67,7 +67,7 @@ class PageText(models.Model):
 
     class Meta: 
         verbose_name = 'Текст страницы'  # Имя модели в единственном числе
-        verbose_name_plural = 'Тексты страницы'  # Имя модели во множественном числе
+        verbose_name_plural = 'Тексты страниц'  # Имя модели во множественном числе
 
     @staticmethod
     def get_page_texts(page_name): 

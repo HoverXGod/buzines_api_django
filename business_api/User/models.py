@@ -201,3 +201,5 @@ class User(AbstractUser):
         user.save()
 
         return jwt_token
+    
+class UserGroup(models.Model): pass

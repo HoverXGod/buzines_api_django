@@ -146,9 +146,9 @@ class JWT_auth:
         except:
             try: 
                 return request.GET['JsonWebToken']
-                
             except: 
-                try: return request.POST['JsonWebToken']
+                try: 
+                    return request.POST['JsonWebToken']
                 except: 
                     try:
                         from Api_Keys.utils import ApiManager
@@ -165,7 +165,10 @@ class JWT_auth:
             try: 
                 return request.GET['JsonWebToken']
             except: 
-                try:
-                    from Api_Keys.utils import ApiManager
-                    return ApiManager.get_super_api_key(api_key=request.GET['api_key'])._generate_jat()
-                except: return None
+                try: 
+                    return request.POST['JsonWebToken']
+                except: 
+                    try:
+                        from Api_Keys.utils import ApiManager
+                        return ApiManager.get_super_api_key(api_key=request.GET['api_key'])._generate_jat()
+                    except: return None

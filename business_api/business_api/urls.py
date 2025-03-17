@@ -13,6 +13,9 @@ urlpatterns = [
     path('', include('Api_Keys.urls')),
     path('', include('Content.urls')),
     path('', include('CRM.urls')),
+    path('', include('Product.urls')),
+    path('', include('Order.urls')),
+    path('', include('Payment.urls')),
 ]
 
 if DEBUG:

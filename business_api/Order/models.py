@@ -1,9 +1,9 @@
 from django.db import models
 from Payment.models import Payment
 from User.models import User
-from Product.models import Cart
+from Product.models import Cart, Promotion, PersonalDiscount, Promocode
 
-class Order(models.model):
+class Order(models.Model):
     """Модель заказа с привязкой к платежу"""
 
 
@@ -19,10 +19,39 @@ class Order(models.model):
 
 
     @classmethod
-    def create__order(request, method_name, cost,dilivery:str="", products:str=""): 
+    def create__order(request, promo, method_name, dilivery:str=""): 
         """Создание заказа в поле products необходимо указать id товаров через запятую без пробелов, dilivery это статус доставки если она есть"""
         
-        products = Cart.get_user_cart_id(request.user)
+        products = Cart.get_user_cart(request.user)
+
+        user = request.user
+
+        cost = 0
+        discount = 0
+
+        person = PersonalDiscount.get_user_personal_discount(user)
+        promotions = Promotion.get_all_promotions()
+
+        for x in products:
+            for y in promotions:
+                if y.product.id == x.id: 
+                    cost += x.price * (1 - (y.discount/100)) 
+                    discount += x.price * (y.discount/100) 
+                    promox = True
+
+            for y in person:
+                if y.product.id == x.id and promox:
+                    cost += x.price * (1 - (y.discount/100)) 
+                    discount += x.price * (y.discount/100) 
+                    promox = True
+
+            if not promox:
+                cost += x.price
+
+            promox = False
+
+        cost = cost * (1 - Promocode.get_discount(promo).discount/100)
+        discount += cost * (Promocode.get_discount(promo).discount/100)
 
         return Order(
             user = request.user,
