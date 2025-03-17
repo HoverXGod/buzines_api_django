@@ -16,7 +16,7 @@ class GetProductsCategory(APIView):
             return SecureResponse(
                 request=request,
                 data=self.serializer_class(
-                    instance=Category.objects.filter(
+                    instance=Product.objects.filter(
                         is_active=True,
                         category=Category.objects.filter(name=category_name)
                         ),

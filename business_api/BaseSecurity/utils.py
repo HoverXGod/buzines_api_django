@@ -71,7 +71,7 @@ class JWT_auth:
     
     @staticmethod
     def _decompile_jwt_token_list(jwt_token: str) -> list: 
-        """Декомпиляция JWT Токена в виде строки"""
+        """Декомпиляция JWT Токена в виде списка""" # [1,2,3,4,"123123"] <- список
 
         return JWT_auth._decompile_jwt_token_str(jwt_token).split(";")
 
