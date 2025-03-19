@@ -88,6 +88,8 @@ SPECTACULAR_SETTINGS = {
     # OTHER SETTINGS
 }
 
+SESSION_COOKIE_AGE = 7*24*60*60 
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',

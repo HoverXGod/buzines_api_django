@@ -202,4 +202,33 @@ class User(AbstractUser):
 
         return jwt_token
     
-class UserGroup(models.Model): pass
+class UserGroup(models.Model): 
+    name = models.CharField(max_length=32)
+    description = models.TextField(max_length=512)
+    permissions = models.TextField(max_length=512, default="0")
+
+    class Meta:
+        verbose_name = 'Группа пользователей'  # Имя модели в единственном числе
+        verbose_name_plural = 'Группы пользователей'  # Имя модели во множественном числе
+
+    @property
+    def permissions_list(self) -> list:
+        return self.permissions.split(",")
+
+    @permissions_list.setter
+    def permissions_list(self, value:list):
+        return ",".join(value)
+    
+    @permissions_list.getter
+    def permissions_list(self) -> list:
+        return self.permissions.split(",")
+
+
+class UserGroupItem(models.Model):
+    group = models.ForeignKey(UserGroup, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    time_add = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Элемент группы'  # Имя модели в единственном числе
+        verbose_name_plural = 'Элементы групп'  # Имя модели во множественном числе
