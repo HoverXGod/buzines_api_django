@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models import Max
 from User.models import User
 
 class Category(models.Model):
@@ -143,6 +144,7 @@ class Cart(models.Model):
     
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    quanity = models.FloatField(default=1.0)
     time_add = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -177,7 +179,10 @@ class Cart(models.Model):
         return ",".join(temp_list)
 
     @staticmethod
-    def add_product_in_cart(product, user): return
+    def add_product_in_cart(product, user, quanity): 
+        """Добавляет товар в коризну и возваращет его"""
+
+        return Cart(product=product, user=user, quanity=quanity).save()
 
     @staticmethod
     def get_all_cart__product(product):
@@ -193,6 +198,96 @@ class Cart(models.Model):
         
         Cart.objects.clear(user=user).delete()
         return True
+    
+
+    @staticmethod
+    def calculate_base_cost(user):
+        cart_items = Cart.objects.filter(user=user).select_related('product')
+        if not cart_items.exists():
+            return 0.0
+        
+        for item in cart_items:
+            product = item.product
+            quantity = item.quantity
+            
+            # Рассчитываем базовую стоимость в зависимости от типа товара
+            if product.by_weight:
+                base_price = product.price * quantity  # price за единицу веса
+            else:
+                base_price = product.price * quantity  # price за штуку
+            
+            original_total += base_price
+    
+    @staticmethod
+    def calculate_total(user, promo_code=None):
+        cart_items = Cart.objects.filter(user=user).select_related('product')
+        if not cart_items.exists():
+            return 0.0
+
+        product_ids = [item.product.id for item in cart_items]
+        
+        # Получаем максимальные скидки для всех продуктов в корзине
+        promo_discounts = Promotion.objects.filter(
+            product_id__in=product_ids,
+            on_start=True
+        ).values('product_id').annotate(max_discount=Max('discount'))
+        
+        personal_discounts = PersonalDiscount.objects.filter(
+            user=user,
+            product_id__in=product_ids,
+            on_start=True
+        ).values('product_id').annotate(max_discount=Max('discount'))
+
+        # Создаем словари для быстрого доступа
+        promo_dict = {pd['product_id']: pd['max_discount'] for pd in promo_discounts}
+        personal_dict = {pd['product_id']: pd['max_discount'] for pd in personal_discounts}
+
+        original_total = 0.0
+        total_with_discounts = 0.0
+
+        for item in cart_items:
+            product = item.product
+            quantity = item.quantity
+            
+            # Рассчитываем базовую стоимость в зависимости от типа товара
+            if product.by_weight:
+                base_price = product.price * quantity  # price за единицу веса
+            else:
+                base_price = product.price * quantity  # price за штуку
+            
+            original_total += base_price
+
+            # Получаем максимальные скидки
+            promo_disc = promo_dict.get(product.id, 0)
+            personal_disc = personal_dict.get(product.id, 0)
+            max_disc = min(max(promo_disc, personal_disc), 50)  # Ограничение до 50%
+
+            # Применяем скидку к товару
+            discounted_price = base_price * (100 - max_disc) / 100
+            total_with_discounts += discounted_price
+
+        # Обработка промокода
+        promo_discount = 0
+        if promo_code:
+            try:
+                promo = Promocode.objects.get(code=promo_code)
+                promo_discount = min(promo.discount, 100)
+            except Promocode.DoesNotExist:
+                pass
+
+        # Применяем промокод к общей сумме
+        if promo_discount > 0:
+            total_after_promo = total_with_discounts * (100 - promo_discount) / 100
+        else:
+            total_after_promo = total_with_discounts
+
+        # Проверяем общее ограничение в 50%
+        if original_total > 0:
+            total_discount = ((original_total - total_after_promo) / original_total) * 100
+            if total_discount > 50:
+                total_after_promo = original_total * 0.5
+
+        return round(total_after_promo, 2)
 
 class Promotion(models.Model):
     """Акции на товары"""

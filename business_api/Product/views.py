@@ -271,12 +271,17 @@ class AddProductInCart(APIView):
         product = Product.objects.get(id=request.GET['product_id'])
 
         try:
+            quanity = request.GET['weight_quanity']
+        except: quanity = 1
+
+        try:
             return SecureResponse(
                 request=request, 
                 data=self.serializer_class(
                     instance=Cart.add_product_in_cart(
                         user=request.user,
-                        product=product
+                        product=product,
+                        quanity=quanity
                         )
                     ).data,
                 status=200
@@ -452,6 +457,42 @@ class RemoveUserCart(APIView):
 
             return SecureResponse(
                 request=request, 
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class GetCartCost(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = CartSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data={
+                    "cost": Cart.calculate_base_cost(request.user)
+                },
+                status=200
+                )
+        except: 
+            return SecureResponse(request=request, status=400)
+        
+class GetCartDiscount(APIView): 
+    
+    permission_classes = [isAutorized]
+    serializer_class = CartSerializer
+
+    def get(self, request):
+
+        try:
+            return SecureResponse(
+                request=request, 
+                data={
+                    "discount":Cart.calculate_base_cost(request.user) - Cart.calculate_total(request.user)
+                },
                 status=200
                 )
         except: 

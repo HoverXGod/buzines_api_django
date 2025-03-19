@@ -22,7 +22,7 @@ class Payment(models.Model):
     def create__payment(method_name, cost, request, products, discount):
         """Создание платежа"""
 
-        method = get_method(method_name).create_payment(products, cost, request)
+        method = get_method(method_name).create_payment(products, cost, discount, request)
         return Payment(
             method = method.name,
             status = "started",

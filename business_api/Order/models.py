@@ -26,32 +26,8 @@ class Order(models.Model):
 
         user = request.user
 
-        cost = 0
-        discount = 0
-
-        person = PersonalDiscount.get_user_personal_discount(user)
-        promotions = Promotion.get_all_promotions()
-
-        for x in products:
-            for y in promotions:
-                if y.product.id == x.id: 
-                    cost += x.price * (1 - (y.discount/100)) 
-                    discount += x.price * (y.discount/100) 
-                    promox = True
-
-            for y in person:
-                if y.product.id == x.id and promox:
-                    cost += x.price * (1 - (y.discount/100)) 
-                    discount += x.price * (y.discount/100) 
-                    promox = True
-
-            if not promox:
-                cost += x.price
-
-            promox = False
-
-        cost = cost * (1 - Promocode.get_discount(promo).discount/100)
-        discount += cost * (Promocode.get_discount(promo).discount/100)
+        cost = Cart.calculate_base_cost(user=user)
+        discount = cost - Cart.calculate_total(user=user, promo_code=promo)
 
         return Order(
             user = request.user,
@@ -59,7 +35,8 @@ class Order(models.Model):
                 method_name,
                 cost,
                 request,
-                products
+                products,
+                discount
                 ),
             products = products,
             dilivery = dilivery

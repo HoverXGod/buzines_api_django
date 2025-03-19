@@ -24,5 +24,7 @@ urlpatterns = [
     path('api/product/delete_promotion', DeletePromotion.as_view()), 
     path('api/product/remove_product_in_cart', RemoveProductInUserCart.as_view()), 
     path('api/product/remove_user_cart', RemoveUserCart.as_view()), 
+    path('api/product/get_cart_cost', GetCartCost.as_view()), 
+    path('api/product/get_cart_discount', GetCartDiscount.as_view()), 
 
 ]

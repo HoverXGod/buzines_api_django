@@ -5,7 +5,7 @@ class BaseMethod:
 
     def __init__(self, id=None): pass
     
-    def create_payment(self, products, cost, request): return
+    def create_payment(self, products, cost, discount, request): return
 
     def check_status(self): return
     
