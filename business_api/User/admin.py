@@ -15,6 +15,6 @@ class UserGroupAdmin(admin.ModelAdmin):
 
 @admin.register(UserGroupItem)
 class UserGroupItemAdmin(admin.ModelAdmin):
-    list_display = ['id', 'user', 'group']
+    list_display = ['id', 'user', 'group__name']
     search_fields = ['id', 'user', 'group']
-    readonly_fields = ['id', 'user', 'group']
+    readonly_fields = ['id']

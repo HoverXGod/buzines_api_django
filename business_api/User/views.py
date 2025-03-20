@@ -1,14 +1,13 @@
 from rest_framework.views import APIView
 from BaseSecurity.permissions import isAutorized, isSuperUser, isAdmin, isAnonymous
 from BaseSecurity.services import SecureResponse
-from .serializers import UserSerializer
+from .serializers import UserSerializer, UserGroupSerializer
 from Api_Keys.serializers import ApiKeySerializer
 from Api_Keys.models import Api_key
-from .models import User
+from .models import User, UserGroup
 
 from drf_spectacular.settings import spectacular_settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter
-from drf_spectacular.views import AUTHENTICATION_CLASSES
 
 
 
@@ -62,7 +61,14 @@ class RegisterUser(APIView):
         jwt_token = User.login_user_by_password(request, email=email, password=password)
 
         if answer == None: return SecureResponse(request=request, status=400)
-        return SecureResponse(request=request, data={"JsonWebToken":jwt_token, "UserData": self.serializer_class(instance=answer).data}, status=200)
+        return SecureResponse(
+            request=request, 
+            data={
+                "JsonWebToken":jwt_token, 
+                "UserData": self.serializer_class(instance=answer).data
+                }, 
+            status=200
+            )
 
 
 class loginUser(APIView):
@@ -90,7 +96,14 @@ class MyProfile(APIView):
 
         api_keys = Api_key.objects.filter(user=user)
 
-        return SecureResponse(request=request, data={ 'UserData': self.serializer_class(instance=user).data, 'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data}, status=200)
+        return SecureResponse(
+            request=request, 
+            data={ 
+                'UserData': self.serializer_class(instance=user).data, 
+                'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data
+                }, 
+            status=200
+            )
 
 class UserProfile(APIView):
 
@@ -106,7 +119,14 @@ class UserProfile(APIView):
 
         api_keys = Api_key.objects.filter(user=user)
 
-        return SecureResponse(request=request, data={ 'UserData': self.serializer_class(instance=user).data, 'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data}, status=200)
+        return SecureResponse(
+            request=request,
+            data={ 
+                'UserData': self.serializer_class(instance=user).data, 
+                'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data
+            }, 
+            status=200
+            )
 
 class EditProfileUser(APIView):
 
@@ -206,3 +226,40 @@ class DeleteUser(APIView):
         else: return SecureResponse(request=request, status=403)
 
         return SecureResponse(request=request, status=200)
+    
+class MyGroups(APIView):
+
+    serializer_class = UserGroupSerializer
+    permission_classes = [isAutorized]
+
+    def get(self, request):
+        user = request.user
+
+        return SecureResponse(
+            request=request,
+            data=self.serializer_class(
+                instance=UserGroup.get_user_groups__list(user), 
+                many=True).data, 
+            status=200
+            )
+    
+class UserGroups(APIView):
+
+    serializer_class = UserGroupSerializer
+    permission_classes = [isAutorized]
+
+    def get(self, request):
+        user_id = request.GET['user_id']
+        user = None
+        
+        try: user = User.objects.get(id=user_id)
+        except: return SecureResponse(request=request, status=400)
+
+
+        return SecureResponse(
+            request=request,
+            data=self.serializer_class(
+                instance=UserGroup.get_user_groups__list(user), 
+                many=True).data, 
+            status=200
+            )

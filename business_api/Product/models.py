@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Max
-from User.models import User
+from User.models import User, UserGroup, UserGroupItem
 
 class Category(models.Model):
     """Модель категори к которой относятся товары"""
@@ -238,9 +238,16 @@ class Cart(models.Model):
             on_start=True
         ).values('product_id').annotate(max_discount=Max('discount'))
 
+        group_discounts = GroupPromotion.objects.filter(
+            user_group=UserGroup.get_user_groups__id(user),
+            product_id__in=product_ids,
+            on_start=True
+        ).values('product_id').annotate(max_discount=Max('discount'))
+
         # Создаем словари для быстрого доступа
         promo_dict = {pd['product_id']: pd['max_discount'] for pd in promo_discounts}
         personal_dict = {pd['product_id']: pd['max_discount'] for pd in personal_discounts}
+        group_dict = {pd['product_id']: pd['max_discount'] for pd in group_discounts}
 
         original_total = 0.0
         total_with_discounts = 0.0
@@ -260,7 +267,8 @@ class Cart(models.Model):
             # Получаем максимальные скидки
             promo_disc = promo_dict.get(product.id, 0)
             personal_disc = personal_dict.get(product.id, 0)
-            max_disc = min(max(promo_disc, personal_disc), 50)  # Ограничение до 50%
+            group_disc = group_dict.get(product.id, 0)
+            max_disc = min(max(promo_disc, max(personal_disc, group_disc)), 50)  # Ограничение до 50%
 
             # Применяем скидку к товару
             discounted_price = base_price * (100 - max_disc) / 100
@@ -411,3 +419,24 @@ class Promocode(models.Model):
 
         self.delete()
         return True
+    
+class GroupPromotion(models.Model):
+    user_group = models.ForeignKey(UserGroup, on_delete=models.CASCADE)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
+    discount = models.FloatField(max_length=100)
+    description = models.TextField(max_length=512, default="Base")
+    name = models.CharField(max_length=64, default="Base")
+    on_start = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Акция для группы'  # Имя модели в единственном числе
+        verbose_name_plural = 'Акции для групп'  # Имя модели во множественном числе
+
+    @staticmethod
+    def get_user_personal_discount(user):
+        """Возвращает акции пользовательской группы"""
+        return GroupPromotion.objects.filter(
+            user_group=UserGroup.get_user_groups__list(
+                user
+                )
+            )

@@ -311,16 +311,20 @@ class GetAllPromotions(APIView):
 class GetPersonalDiscount(APIView): 
     
     permission_classes = [isAutorized]
-    serializer_class = PersonalDiscountSerializer
+    serializer_classes = [PersonalDiscountSerializer, GroupPromotionSerializer]
 
     def get(self, request):
 
         try:
             return SecureResponse(
                 request=request, 
-                data=self.serializer_class(
-                    instance=PersonalDiscount.get_user_personal_discount(request.user)
-                    ).data,
+                data={
+                    "Personal": self.serializer_classes[0](
+                        instance=PersonalDiscount.get_user_personal_discount(request.user)
+                        ).data,
+                    "Group": self.serializer_classes[1](
+                        instance=GroupPromotion.get_user_personal_discount(request.user)
+                        ).data},
                 status=200
                 )
         except: 

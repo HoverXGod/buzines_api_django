@@ -222,7 +222,37 @@ class UserGroup(models.Model):
     @permissions_list.getter
     def permissions_list(self) -> list:
         return self.permissions.split(",")
+    
+    @staticmethod
+    def get_user_groups__id(user):
+        """Возвращает список Айдишников групп пользователя"""
 
+        items = UserGroupItem.objects.filter(user=user)
+        items__group = [group_obj.group.id for group_obj in items]
+        return_list = list()
+
+        for item in items__group:
+            if item not in return_list:
+                return_list.append(item)
+
+        return return_list
+    
+    @staticmethod
+    def get_user_groups__list(user):
+        """Возвращает список Групп групп пользователя"""
+
+        items = UserGroupItem.objects.filter(user=user)
+        items__group = [group_obj.group for group_obj in items]
+        return_list = list()
+
+        for item in items__group:
+            if item not in return_list:
+                return_list.append(item)
+
+        print(return_list)
+        print(1)
+
+        return return_list
 
 class UserGroupItem(models.Model):
     group = models.ForeignKey(UserGroup, on_delete=models.CASCADE)

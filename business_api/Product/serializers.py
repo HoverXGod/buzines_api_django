@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from .models import *
-from User.serializers import UserSerializer
+from User.serializers import UserSerializer, UserGroupSerializer
 
 class CategorySerializer(serializers.ModelSerializer):
 
@@ -65,3 +65,11 @@ class PromoCodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Promocode
         fields = ['id', 'code', 'discount']
+
+class GroupPromotionSerializer(serializers.ModelSerializer):
+
+    user_group = UserGroupSerializer
+    
+    class Meta:
+        model = GroupPromotion
+        fields = ['id', 'user_group', 'discount', 'product', 'description', 'name', 'on_start']
