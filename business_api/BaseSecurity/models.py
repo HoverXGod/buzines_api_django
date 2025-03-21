@@ -40,7 +40,6 @@ class AuditLog(models.Model):
 
         action = "".join(action.split("?")[0])
 
-
         details = {
             "SESSION": SESSION,
             "COOKIES": COOKIES,
@@ -54,14 +53,12 @@ class AuditLog(models.Model):
             audit = AuditLog(
                 action=action,
                 details=details,
-            )
+            ).save()
         else: 
             audit = AuditLog(
                 user=user,
                 action=action,
                 details=details,
-            )
-
-        audit.save()
+            ).save()
 
         return AuditLog.objects.last()

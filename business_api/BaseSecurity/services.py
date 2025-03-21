@@ -42,15 +42,15 @@ class SessionManager:
 
     def __is_user(self):
         if self.request.method == "GET":
-            if "JsonWebToken" in self.request.GET:
-                return True, "GET", self.request.GET['JsonWebToken']
+            if "JWTCloudeToken" in self.request.GET:
+                return True, "GET", self.request.GET['JWTCloudeToken']
             
         elif self.request.method == "POST":
-            if "JsonWebToken" in self.request.POST:
-                return True, "POST", self.request.POST['JsonWebToken']
+            if "JWTCloudeToken" in self.request.POST:
+                return True, "POST", self.request.POST['JWTCloudeToken']
             
-        if "JsonWebToken" in dict(self.request.session.items()):
-            return True, "session", self.request.session['JsonWebToken']
+        if "JWTCloudeToken" in dict(self.request.session.items()):
+            return True, "session", self.request.session['JWTCloudeToken']
 
         return False, None, None
     
@@ -58,7 +58,7 @@ class SessionManager:
         is_jwt, jwt_path, jwt_token = self.__is_user()
 
         if is_jwt and jwt_path != "session": 
-            self.request.session['JsonWebToken'] = jwt_token
+            self.request.session['JWTCloudeToken'] = jwt_token
         else: return False
 
         return True

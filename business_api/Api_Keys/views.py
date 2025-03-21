@@ -27,7 +27,7 @@ class CreateApiKey(APIView):
         
         key = Api_key.objects.last()
 
-        return SecureResponse(request=request, data={"ApiKey": self.serializer_class(instance=key).data}, status=200)
+        return SecureResponse(request=request, data={"API key": self.serializer_class(instance=key).data}, status=200)
     
 class DeleteApiKey(APIView):
     
@@ -73,7 +73,7 @@ class UpdateApiKey(APIView):
             key.update_key(key_value)
         else: key.update_key_random()
 
-        return SecureResponse(request=request, data={"ApiKey": self.serializer_class(instance=key).data}, status=200)
+        return SecureResponse(request=request, data={"API key": self.serializer_class(instance=key).data}, status=200)
     
 
 class ShowMyApiKeys(APIView):
@@ -87,7 +87,7 @@ class ShowMyApiKeys(APIView):
         try: keys = Api_key.objects.filter(user=user)
         except: return SecureResponse(request=request, status=400)
 
-        return SecureResponse(request=request, data={"ApiKeys": self.serializer_class(instance=keys, many=True).data}, status=200)
+        return SecureResponse(request=request, data={"API keys": self.serializer_class(instance=keys, many=True).data}, status=200)
 
 class ShowUserApiKeys(APIView):
 
@@ -119,5 +119,5 @@ class DecryptKey(APIView):
         user = request.user
 
         if key.user.id == user.id:
-            return SecureResponse(request=request, data={"DecryptKey": key.key}, status=200)
+            return SecureResponse(request=request, data={"Decrypt key": key.key}, status=200)
         else: return SecureResponse(request=request, status=403)

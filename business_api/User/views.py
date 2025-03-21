@@ -64,8 +64,8 @@ class RegisterUser(APIView):
         return SecureResponse(
             request=request, 
             data={
-                "JsonWebToken":jwt_token, 
-                "UserData": self.serializer_class(instance=answer).data
+                "JWTCloudeToken":jwt_token, 
+                "User data": self.serializer_class(instance=answer).data
                 }, 
             status=200
             )
@@ -84,11 +84,11 @@ class loginUser(APIView):
 
         jwt_token = User.login_user_by_password(request, login=login, password=password)
         if jwt_token == None: return SecureResponse(request=request, status=400)
-        else: return SecureResponse(request=request, data={"JsonWebToken":jwt_token})
+        else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token})
 
 class MyProfile(APIView):
 
-    serializer_class = UserSerializer
+    serializer_classes = [UserSerializer, ApiKeySerializer, UserGroupSerializer]
     permission_classes = [isAutorized]
 
     def get(self, request):
@@ -99,15 +99,15 @@ class MyProfile(APIView):
         return SecureResponse(
             request=request, 
             data={ 
-                'UserData': self.serializer_class(instance=user).data, 
-                'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data
-                }, 
-            status=200
+                'User data': self.serializer_classes[0](instance=user).data, 
+                'API keys': self.serializer_classes[1](instance=api_keys, many=True).data,
+                'User groups': self.serializer_classes[2](instance=UserGroup.get_user_groups__list(user), many=True).data
+            }, status=200
             )
 
 class UserProfile(APIView):
 
-    serializer_class = UserSerializer
+    serializer_classes = [UserSerializer, ApiKeySerializer, UserGroupSerializer]
     permission_classes = [isSuperUser]
 
     def get(self, request):
@@ -122,8 +122,9 @@ class UserProfile(APIView):
         return SecureResponse(
             request=request,
             data={ 
-                'UserData': self.serializer_class(instance=user).data, 
-                'ApiKeys':ApiKeySerializer(instance=api_keys, many=True).data
+                'User data': self.serializer_classes[0](instance=user).data, 
+                'API keys': self.serializer_classes[1](instance=api_keys, many=True).data,
+                'User groups': self.serializer_classes[2](instance=UserGroup.get_user_groups__list(user), many=True).data
             }, 
             status=200
             )
@@ -164,7 +165,7 @@ class EditProfileUser(APIView):
         answer = user.edit_profile(addres=addres, last_name=last_name, first_name=first_name, name=username, old_pasword=old_password, password=password, email=email, phone_number=phone_number)
         if answer: 
             user = User.objects.get(id=user_id)
-            return SecureResponse(request=request, data={"UserData": self.serializer_class(instance=user).data}, status=200)
+            return SecureResponse(request=request, data={"User data": self.serializer_class(instance=user).data}, status=200)
         else: return SecureResponse(request=request, status=400)
 
 class SetSuperUser(APIView):

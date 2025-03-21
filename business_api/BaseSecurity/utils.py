@@ -140,35 +140,28 @@ class JWT_auth:
     def get_jwt(request) -> str:
         """Получение JWT или JAT токена из request"""
 
-
-        try: 
-            return request.session['JsonWebToken'] if request.session['JsonWebToken'] != None else 0/0
+        try:
+            return dict(request.session.items())['JWTCloudeToken']
         except:
             try: 
-                return request.GET['JsonWebToken']
-            except: 
-                try: 
-                    return request.POST['JsonWebToken']
-                except: 
-                    try:
-                        from Api_Keys.utils import ApiManager
-                        return ApiManager.get_api_key(api_key=request.GET['api_key'])._generate_jat()
-                    except: return None
+                return dict(request.META.items())['HTTP_JWTCLOUDETOKEN']
+            except:
+                try:
+                    from Api_Keys.utils import ApiManager
+                    return ApiManager.get_api_key(api_key=request.META['API key'])._generate_jat()
+                except: return None
 
     @staticmethod 
     def get_jwt_super(request) -> str:
         """Получение JWT super или JAT super токена из request"""
 
         try:
-            return request.session['JsonWebToken']
+            return dict(request.session.items())['JWTCloudeToken']
         except:
             try: 
-                return request.GET['JsonWebToken']
-            except: 
-                try: 
-                    return request.POST['JsonWebToken']
-                except: 
+                return dict(request.META.items())['HTTP_JWTCLOUDETOKEN']
+            except:
                     try:
                         from Api_Keys.utils import ApiManager
-                        return ApiManager.get_super_api_key(api_key=request.GET['api_key'])._generate_jat()
+                        return ApiManager.get_super_api_key(api_key=request.META['API key'])._generate_jat()
                     except: return None
