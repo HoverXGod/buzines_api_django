@@ -69,31 +69,43 @@ class StartOrder(APIView):
 
     def get(self, request):
 
-        try:    
-            return SecureResponse(
-                request=request,
-                data=self.serializer_class(
-                    instance=Order.create__order(
-                        promo=request.GET['promocode'],
-                        method_name=request.GET['method_name'],
-                        ),
-                    ).data,
-                status=200
-                )
-        except: 
-            try:    
-                return SecureResponse(
+        return SecureResponse(
                     request=request,
                     data=self.serializer_class(
                         instance=Order.create__order(
+                            request=request,
                             promo="",
                             method_name=request.GET['method_name'],
                             ),
                         ).data,
                     status=200
                     )
-            except:
-                return SecureResponse(request=request, status=400)
+
+        # try:    
+        #     return SecureResponse(
+        #         request=request,
+        #         data=self.serializer_class(
+        #             instance=Order.create__order(
+        #                 promo=request.GET['promocode'],
+        #                 method_name=request.GET['method_name'],
+        #                 ),
+        #             ).data,
+        #         status=200
+        #         )
+        # except: 
+        #     try:    
+        #         return SecureResponse(
+        #             request=request,
+        #             data=self.serializer_class(
+        #                 instance=Order.create__order(
+        #                     promo="",
+        #                     method_name=request.GET['method_name'],
+        #                     ),
+        #                 ).data,
+        #             status=200
+        #             )
+        #     except:
+        #         return SecureResponse(request=request, status=400)
             
 class GetOrder(APIView): 
     

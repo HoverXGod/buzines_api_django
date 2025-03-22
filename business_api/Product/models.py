@@ -157,7 +157,7 @@ class Cart(models.Model):
         """Возвращает полный перечень товаров пользователя"""
 
         try: 
-             return Cart.objects.all(user=user)
+             return Cart.objects.filter(user=user)
         except: return None
 
     @staticmethod
@@ -165,7 +165,7 @@ class Cart(models.Model):
         """Возвращает полный перечень товаров пользователя в виде их id через запятую"""
 
         try: 
-            cart = Cart.objects.all(user=user)
+            cart = Cart.objects.filter(user=user)
         except: return None
 
         from .serializers import UserCartSerializer
@@ -174,7 +174,7 @@ class Cart(models.Model):
         
         temp_list = list()
         
-        for x in cart: temp_list.append(x['id'])
+        for x in cart: temp_list.append(str(x['product']['id']))
         
         return ",".join(temp_list)
 
@@ -182,33 +182,38 @@ class Cart(models.Model):
     def add_product_in_cart(product, user, quanity): 
         """Добавляет товар в коризну и возваращет его"""
 
-        return Cart(product=product, user=user, quanity=quanity).save()
+        Cart(product=product, user=user, quanity=quanity).save()
+        return Cart.objects.last()
 
     @staticmethod
     def get_all_cart__product(product):
         """Возвращает полный перечень пользователей с этим товаром в корзине"""
 
         try: 
-            return Cart.objects.all(product=product)
+            return Cart.objects.filter(product=product)
         except: return None
 
     @staticmethod
-    def delete_user_cart(self, user):
+    def delete_user_cart(user):
         """Удаление товаров в корзине пользователя"""
         
-        Cart.objects.clear(user=user).delete()
+        Cart.objects.filter(user=user).delete()
         return True
     
 
     @staticmethod
     def calculate_base_cost(user):
+
         cart_items = Cart.objects.filter(user=user).select_related('product')
+        
         if not cart_items.exists():
             return 0.0
         
+        original_total = 0.0
+
         for item in cart_items:
             product = item.product
-            quantity = item.quantity
+            quantity = item.quanity
             
             # Рассчитываем базовую стоимость в зависимости от типа товара
             if product.by_weight:
@@ -217,10 +222,14 @@ class Cart(models.Model):
                 base_price = product.price * quantity  # price за штуку
             
             original_total += base_price
+
+        return original_total
     
     @staticmethod
     def calculate_total(user, promo_code=None):
+        
         cart_items = Cart.objects.filter(user=user).select_related('product')
+
         if not cart_items.exists():
             return 0.0
 
@@ -239,7 +248,7 @@ class Cart(models.Model):
         ).values('product_id').annotate(max_discount=Max('discount'))
 
         group_discounts = GroupPromotion.objects.filter(
-            user_group=UserGroup.get_user_groups__id(user),
+            user_group_id__in=UserGroup.get_user_groups__id(user),
             product_id__in=product_ids,
             on_start=True
         ).values('product_id').annotate(max_discount=Max('discount'))
@@ -254,13 +263,13 @@ class Cart(models.Model):
 
         for item in cart_items:
             product = item.product
-            quantity = item.quantity
+            quanity = item.quanity
             
             # Рассчитываем базовую стоимость в зависимости от типа товара
             if product.by_weight:
-                base_price = product.price * quantity  # price за единицу веса
+                base_price = product.price * quanity  # price за единицу веса
             else:
-                base_price = product.price * quantity  # price за штуку
+                base_price = product.price * quanity  # price за штуку
             
             original_total += base_price
 
@@ -340,7 +349,7 @@ class Promotion(models.Model):
     def get_all_promotions():
         """Получение всех активных акций"""
 
-        return Promotion.objects.all(on_start=True)
+        return Promotion.objects.filter(on_start=True)
 
 class PersonalDiscount(models.Model):
     """Персональные скидки пользователей"""
@@ -387,7 +396,7 @@ class PersonalDiscount(models.Model):
     def get_user_personal_discount(user):
         """Получение всех индвидуальных предложенй пользователя"""
         
-        return PersonalDiscount.objects.all(user=user, on_start=True)
+        return PersonalDiscount.objects.filter(user=user, on_start=True)
     
 class Promocode(models.Model):
     code = models.TextField(max_length=64)

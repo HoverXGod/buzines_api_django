@@ -5,7 +5,7 @@ class Payment(models.Model):
     method = models.TextField(max_length=32)
     status = models.CharField(max_length=16)
     pay_time = models.DateTimeField(auto_created=False, null=True)
-    created_time = models.DateTimeField(auto_created=True)
+    created_time = models.DateTimeField(auto_now=True)
     cost = models.IntegerField()
     payment_id = models.CharField(max_length=128)
     discount = models.FloatField()
@@ -14,22 +14,25 @@ class Payment(models.Model):
         verbose_name = 'Платёж'  # Имя модели в единственном числе
         verbose_name_plural = 'Платежи'  # Имя модели во множественном числе
 
-
     @property
     def is_payment(self) -> bool: return True if self.status == "succesfull" else False
 
-    @classmethod
+    @staticmethod
     def create__payment(method_name, cost, request, products, discount):
         """Создание платежа"""
 
-        method = get_method(method_name).create_payment(products, cost, discount, request)
-        return Payment(
+        method = get_method(method_name)
+        method.create_payment(products, cost, discount, request)
+        
+        Payment.objects.create(
             method = method.name,
             status = "started",
             cost = cost,
             payment_id = method.id, 
             discount=discount
-        ).save()
+        )
+
+        return Payment.objects.last()
 
     def check__status(self): 
         """Проверка и обновление статуса платежа"""

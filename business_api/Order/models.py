@@ -10,27 +10,30 @@ class Order(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, null=False)
     payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=False)
     products = models.TextField(max_length=1024)
-    date = models.DateTimeField(auto_created=True)
+    date = models.DateTimeField(auto_now=True)
     dilivery = models.TextField(max_length=512)
+    dilivery_status = models.CharField(max_length=32)
 
     class Meta:
         verbose_name = 'Заказ'  # Имя модели в единственном числе
         verbose_name_plural = 'Заказы'  # Имя модели во множественном числе
 
 
-    @classmethod
-    def create__order(request, promo, method_name, dilivery:str=""): 
-        """Создание заказа в поле products необходимо указать id товаров через запятую без пробелов, dilivery это статус доставки если она есть"""
+    @staticmethod
+    def create__order(request, promo, method_name): 
+        """Создание заказа, dilivery это статус доставки если она есть"""
         
         products = Cart.get_user_cart(request.user)
 
         user = request.user
 
+        dilivery = ""
+
         cost = Cart.calculate_base_cost(user=user)
         discount = cost - Cart.calculate_total(user=user, promo_code=promo)
 
-        return Order(
-            user = request.user,
+        Order.objects.create(
+            user = user,
             payment = Payment.create__payment(
                 method_name,
                 cost,
@@ -38,9 +41,13 @@ class Order(models.Model):
                 products,
                 discount
                 ),
-            products = products,
+            products = Cart.get_user_cart_id(user=user).split(','),
             dilivery = dilivery
-        ).save()
+        )
+
+        Cart.delete_user_cart(user)
+
+        return Order.objects.last()
     
     def cancel_order(self, method_name) -> bool: 
         """Возврат средств, возвращат успешность выполнения функции"""

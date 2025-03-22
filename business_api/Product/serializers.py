@@ -14,6 +14,7 @@ class ProductSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = Product
+        depth = 1
         fields = ['id', 'image', 'name', 'description', 'price', 'by_weight', 'weight', 'weight_start', 'weight_end', 'category']
 
 class CartSerializer(serializers.ModelSerializer):
@@ -23,6 +24,7 @@ class CartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
+        depth = 1
         fields = ['id', 'user', 'product', 'time_add']
 
 class UserCartSerializer(serializers.ModelSerializer):
@@ -31,6 +33,7 @@ class UserCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
+        depth = 1
         fields = ['id', 'product', 'time_add']
 
 class ProductCartSerializer(serializers.ModelSerializer):
@@ -39,6 +42,7 @@ class ProductCartSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Cart
+        depth = 1
         fields = ['id', 'user', 'time_add']
 
 class PromotionSerializer(serializers.ModelSerializer):
@@ -48,6 +52,7 @@ class PromotionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Promotion
+        depth = 1
         fields = ['id', 'discount', 'product', 'description', 'name', 'on_start']
 
 class PersonalDiscountSerializer(serializers.ModelSerializer):
@@ -58,6 +63,7 @@ class PersonalDiscountSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = PersonalDiscount
+        depth = 1
         fields = ['id', 'user', 'discount', 'product', 'description', 'name', 'on_start']
 
 class PromoCodeSerializer(serializers.ModelSerializer):
@@ -72,4 +78,5 @@ class GroupPromotionSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = GroupPromotion
+        depth = 1
         fields = ['id', 'user_group', 'discount', 'product', 'description', 'name', 'on_start']
