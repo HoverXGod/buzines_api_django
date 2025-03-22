@@ -1,6 +1,7 @@
 from django.db import models
 from User.models import User
 from datetime import datetime
+from .services import ImagesManager
 
 class Post(models.Model):
     """Модель поста, имеющая базовые методы, ключ привязан к пользователю"""
@@ -24,7 +25,7 @@ class Post(models.Model):
         post = Post(
             text=text,
             author=author,
-            images=images,
+            images=ImagesManager.set_objects_images(images),
             title=title,
             created_at=date,
             updated_at=date

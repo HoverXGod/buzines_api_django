@@ -7,7 +7,7 @@ class isAnonymous(BasePermission):
     codename="anonym"
 
     def has_permission(self, request, view):
-        return request.user.is_anonymous
+        return 
 
 class isAutorized(BasePermission):
     name="Authorized"

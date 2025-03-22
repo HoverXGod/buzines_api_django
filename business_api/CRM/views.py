@@ -3,6 +3,7 @@ from BaseSecurity.permissions import isSuperUser
 from BaseSecurity.services import SecureResponse
 from Content.serializers import PageTextSerializers
 from Content.models import PageText
+from Content.services import ImagesManager
 
 
 class CreatePageText(APIView): 
@@ -74,3 +75,23 @@ class DeletePageTexts(APIView):
 
         if texts != None: return SecureResponse(request=request, data=self.serializer_class(instance=texts, many=True).data, status=200)
         else: return SecureResponse(request=request, data='', status=400) 
+
+class AddImage(APIView): 
+       
+    permission_classes = [isSuperUser]
+
+    def get(self, request):
+        ImagesManager.load_img(request=request)
+
+        return SecureResponse(request=request, status=200) 
+    
+class DelImage(APIView): 
+       
+    permission_classes = [isSuperUser]
+
+    def get(self, request):
+        try:
+            ImagesManager.del_img(request=request)
+        except:  return SecureResponse(request=request, status=404) 
+
+        return SecureResponse(request=request, status=200) 

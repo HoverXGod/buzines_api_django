@@ -42,13 +42,14 @@ class CreatePost(APIView):
 
         text = request.GET['text']
         title = request.GET['title']
+        images = request.GET['images']
         user = request.user
 
         try:
             post = Post.create_post(
                 text=text,
                 author=user,
-                images='',
+                images=images,
                 title=title
             )
         except: return SecureResponse(request=request, data='', status=400)

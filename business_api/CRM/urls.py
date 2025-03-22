@@ -7,4 +7,6 @@ urlpatterns = [
     path('api/CRM/get_page_texts', GetPageTexts.as_view()),
     path('api/CRM/delete_page_text', DeletePageText.as_view()),
     path('api/CRM/delete_page_texts', DeletePageTexts.as_view()),
+    path('api/CRM/add_image', AddImage.as_view()),
+     path('api/CRM/del_image', DelImage.as_view()),
 ]
