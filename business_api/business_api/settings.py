@@ -50,6 +50,8 @@ INSTALLED_APPS = [
     'Order',
     'rest_framework',
     'drf_spectacular',
+    'import_export',
+    'Analytics',
     
 ]
 

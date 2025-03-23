@@ -6,7 +6,7 @@ class CategorySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Category
-        fields = ['id', 'name', 'description', 'image']
+        fields = ['id', 'name', 'description', 'image', 'slug', 'parent', 'meta_title', 'meta_description']
 
 class ProductSerializer(serializers.ModelSerializer): 
 
@@ -15,7 +15,7 @@ class ProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = Product
         depth = 1
-        fields = ['id', 'image', 'name', 'description', 'price', 'by_weight', 'weight', 'weight_start', 'weight_end', 'category']
+        fields = ['id', 'image', 'name', 'description', 'price', 'by_weight', 'weight', 'weight_start', 'weight_end', 'category', 'sku', 'stock', 'slug']
 
 class CartSerializer(serializers.ModelSerializer):
 
@@ -53,7 +53,7 @@ class PromotionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Promotion
         depth = 1
-        fields = ['id', 'discount', 'product', 'description', 'name', 'on_start']
+        fields = ['id', 'discount', 'product', 'description', 'name', 'on_start', 'start_date', 'end_date', 'used_count', 'max_usage']
 
 class PersonalDiscountSerializer(serializers.ModelSerializer):
     
@@ -64,7 +64,7 @@ class PersonalDiscountSerializer(serializers.ModelSerializer):
     class Meta:
         model = PersonalDiscount
         depth = 1
-        fields = ['id', 'user', 'discount', 'product', 'description', 'name', 'on_start']
+        fields = ['id', 'user', 'discount', 'product', 'description', 'name', 'on_start', 'start_date', 'end_date', 'used_count', 'max_usage']
 
 class PromoCodeSerializer(serializers.ModelSerializer):
     
@@ -79,4 +79,4 @@ class GroupPromotionSerializer(serializers.ModelSerializer):
     class Meta:
         model = GroupPromotion
         depth = 1
-        fields = ['id', 'user_group', 'discount', 'product', 'description', 'name', 'on_start']
+        fields = ['id', 'user_group', 'discount', 'product', 'description', 'name', 'on_start', 'start_date', 'end_date', 'used_count', 'max_usage']

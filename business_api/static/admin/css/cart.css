@@ -1,0 +1,10 @@
+/* Стили для статусных индикаторов */
+td .status-badge {
+    font-size: 18px;
+    vertical-align: middle;
+}
+
+/* Подсветка активных корзин */
+tr.active-cart {
+    background: #2f2f2f;
+}

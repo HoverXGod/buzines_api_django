@@ -4,21 +4,14 @@ from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
 from datetime import datetime
 
-class UserManager(BaseUserManager):
-
-    def create_user(self, username, password=None):
-        user = self.model.register_user(login=username, password=password)
-        return user
-
-    def create_superuser(self, username, password=None, **extra_fields):
-        user = self.create_user(username, password, **extra_fields)
-        user.is_superuser = True
-        user.get_user_api().name_key = "SuperApiKey"
-        return user
-
-
 class User(AbstractUser):   
     """Модель Пользователя, имеет базовые методы"""
+
+    USER_TYPE_CHOICES = (
+        ('customer', 'Покупатель'),
+        ('manager', 'Менеджер'),
+        ('admin', 'Администратор'),
+    )
 
     base_password = models.BinaryField()
     username = models.CharField(max_length=128, unique=True)
@@ -26,13 +19,19 @@ class User(AbstractUser):
     isAdministrator = models.BooleanField(default=False)
     isModerator = models.BooleanField(default=False)
     phone_number = models.CharField(default='', max_length = 18)
-    addres = models.TextField(max_length=256)
-
-    UserManager = UserManager
+    address = models.TextField(max_length=256, default='')
+    currency = models.CharField(max_length=3, default='RUB')
+    user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
 
     class Meta:
         verbose_name = 'Пользователь'  # Имя модели в единственном числе
         verbose_name_plural = 'Пользователи'  # Имя модели во множественном числе
+
+    def short_name(self):
+        return f"{self.first_name} {self.last_name}"
+    
+    def __str__(self):
+        return f"{self.username}: {self.first_name} {self.last_name}"
 
     def set_password(self, raw_password): 
         self.password = Encryption.encrypt_data(data=raw_password)
@@ -123,12 +122,12 @@ class User(AbstractUser):
 
         return True
 
-    def edit_profile(self, addres=None, first_name=None, last_name=None, old_pasword=None, password=None, email=None, phone_number=None) -> bool: 
+    def edit_profile(self, address=None, first_name=None, last_name=None, old_pasword=None, password=None, email=None, phone_number=None) -> bool: 
         """Метод изменения данных пользователя, не имеет никаких проверок, просто изменяет данные"""
 
         if first_name != None: self.first_name = first_name
         if last_name != None: self.last_name = last_name
-        if addres != None: self.addres = addres
+        if address != None: self.address = address
 
         if password != None:
             if old_pasword != None:
@@ -207,6 +206,8 @@ class UserGroup(models.Model):
     description = models.TextField(max_length=512)
     permissions = models.TextField(max_length=512, default="0")
 
+    def __str__(self): return self.name
+
     class Meta:
         verbose_name = 'Группа пользователей'  # Имя модели в единственном числе
         verbose_name_plural = 'Группы пользователей'  # Имя модели во множественном числе
@@ -248,9 +249,6 @@ class UserGroup(models.Model):
         for item in items__group:
             if item not in return_list:
                 return_list.append(item)
-
-        print(return_list)
-        print(1)
 
         return return_list
 

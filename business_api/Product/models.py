@@ -7,12 +7,18 @@ class Category(models.Model):
 
     name = models.CharField(max_length=64, unique=True)
     description = models.TextField()
+    slug = models.SlugField(max_length=255, unique=True, null=True)
     image = models.CharField(max_length=256, default='', null=True)
     is_active = models.BooleanField(default=True)
+    parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
+    meta_title = models.CharField(max_length=255, blank=True, null=True)
+    meta_description = models.TextField(blank=True, null=True)
 
     class Meta:
         verbose_name = 'Категория'  # Имя модели в единственном числе
         verbose_name_plural = 'Категории'  # Имя модели во множественном числе
+
+    def __str__(self): return self.name
 
     @property
     def active(self): return self.active
@@ -69,6 +75,12 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     weight_start = models.FloatField()
     weight_end = models.FloatField()
+
+    sku = models.CharField(max_length=32, unique=True, null=True)
+    stock = models.PositiveIntegerField(default=0)
+    slug = models.SlugField(max_length=255, unique=True, null=True)
+
+    def __str__(self): return self.name
 
     class Meta:
         verbose_name = 'Продукт'  # Имя модели в единственном числе
@@ -142,7 +154,7 @@ class Product(models.Model):
 class Cart(models.Model):
     """Хранение товаров пользователей"""
     
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='cart')
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     quanity = models.FloatField(default=1.0)
     time_add = models.DateTimeField(auto_now=True)
@@ -231,8 +243,7 @@ class Cart(models.Model):
         cart_items = Cart.objects.filter(user=user).select_related('product')
 
         if not cart_items.exists():
-            return 0.0
-
+            return [0.0, []]
         product_ids = [item.product.id for item in cart_items]
         
         # Получаем максимальные скидки для всех продуктов в корзине
@@ -254,16 +265,26 @@ class Cart(models.Model):
         ).values('product_id').annotate(max_discount=Max('discount'))
 
         # Создаем словари для быстрого доступа
-        promo_dict = {pd['product_id']: pd['max_discount'] for pd in promo_discounts}
-        personal_dict = {pd['product_id']: pd['max_discount'] for pd in personal_discounts}
-        group_dict = {pd['product_id']: pd['max_discount'] for pd in group_discounts}
+        promo_dict = {pd['product_id']: {"discount": pd['max_discount'], "promotion": pd['name']} for pd in promo_discounts}
+        personal_dict = {pd['product_id']: {"discount": pd['max_discount'], "promotion": pd['name']} for pd in personal_discounts}
+        group_dict = {pd['product_id']: {"discount": pd['max_discount'], "promotion": pd['name']} for pd in group_discounts}
+
+        product_dict = dict()
 
         original_total = 0.0
         total_with_discounts = 0.0
 
+        shag = 1
+
         for item in cart_items:
+            product_dict[shag] = dict()
+            shag += 1
+
             product = item.product
             quanity = item.quanity
+
+            product_dict[shag]['product'] = product
+            product_dict[shag]['quanity'] = quanity
             
             # Рассчитываем базовую стоимость в зависимости от типа товара
             if product.by_weight:
@@ -277,11 +298,28 @@ class Cart(models.Model):
             promo_disc = promo_dict.get(product.id, 0)
             personal_disc = personal_dict.get(product.id, 0)
             group_disc = group_dict.get(product.id, 0)
-            max_disc = min(max(promo_disc, max(personal_disc, group_disc)), 50)  # Ограничение до 50%
+            max_disc = min(max(promo_disc['discount'], max(personal_disc['discount'], group_disc['discount'])), 50)  # Ограничение до 50%
 
             # Применяем скидку к товару
             discounted_price = base_price * (100 - max_disc) / 100
             total_with_discounts += discounted_price
+
+            product_dict[shag]['promotion'] = "None"
+
+            for x in promo_disc:
+                if x['discount'] == max_disc:
+                    product_dict[shag]['promotion'] = x['promotion']
+            
+            for x in group_disc:
+                if x['discount'] == max_disc:
+                    product_dict[shag]['promotion'] = x['promotion']
+
+            for x in personal_disc:
+                if x['discount'] == max_disc:
+                    product_dict[shag]['promotion'] = x['promotion'] 
+
+            product_dict[shag]['price'] = base_price
+            product_dict[shag]['discount'] = base_price - discounted_price
 
         # Обработка промокода
         promo_discount = 0
@@ -304,7 +342,7 @@ class Cart(models.Model):
             if total_discount > 50:
                 total_after_promo = original_total * 0.5
 
-        return round(total_after_promo, 2)
+        return [round(total_after_promo, 2), product_dict]
 
 class Promotion(models.Model):
     """Акции на товары"""
@@ -314,6 +352,13 @@ class Promotion(models.Model):
     description = models.TextField(max_length=512, default="Base")
     name = models.CharField(max_length=64, default="Base")
     on_start = models.BooleanField(default=False)
+
+    start_date = models.DateTimeField(auto_now=True)
+    end_date = models.DateTimeField(null=True)
+    max_usage = models.PositiveIntegerField(null=True, blank=True)
+    used_count = models.PositiveIntegerField(default=0)
+
+    def __str__(self): return self.name
 
     class Meta:
         verbose_name = 'Акция'  # Имя модели в единственном числе
@@ -332,6 +377,9 @@ class Promotion(models.Model):
         
     @property
     def started(self): return self.on_start
+
+    @property
+    def created(self): return self.start_date
 
     @started.setter
     def started(self, value):
@@ -361,9 +409,19 @@ class PersonalDiscount(models.Model):
     name = models.CharField(max_length=64, default="Base")
     on_start = models.BooleanField(default=False)
 
+    start_date = models.DateTimeField(auto_now=True)
+    end_date = models.DateTimeField(null=True)
+    max_usage = models.PositiveIntegerField(null=True, blank=True)
+    used_count = models.PositiveIntegerField(default=0)
+
+    def __str__(self): return self.name
+
     class Meta:
         verbose_name = 'Персональная скидка'  # Имя модели в единственном числе
         verbose_name_plural = 'Персональные скидки'  # Имя модели во множественном числе
+
+    @property
+    def created(self): return self.start_date
 
     @staticmethod
     def create_personal_discount(user, product=None, discount=1, description="", name="User discount"):
@@ -430,6 +488,8 @@ class Promocode(models.Model):
         return True
     
 class GroupPromotion(models.Model):
+    """Акции для групп пользователей"""
+
     user_group = models.ForeignKey(UserGroup, on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.CASCADE, null=True)
     discount = models.FloatField(max_length=100)
@@ -437,9 +497,19 @@ class GroupPromotion(models.Model):
     name = models.CharField(max_length=64, default="Base")
     on_start = models.BooleanField(default=False)
 
+    start_date = models.DateTimeField(auto_now=True)
+    end_date = models.DateTimeField(null=True)
+    max_usage = models.PositiveIntegerField(null=True, blank=True)
+    used_count = models.PositiveIntegerField(default=0)
+
+    def __str__(self): return self.name
+
     class Meta:
         verbose_name = 'Акция для группы'  # Имя модели в единственном числе
         verbose_name_plural = 'Акции для групп'  # Имя модели во множественном числе
+
+    @property
+    def created(self): return self.start_date
 
     @staticmethod
     def get_user_personal_discount(user):

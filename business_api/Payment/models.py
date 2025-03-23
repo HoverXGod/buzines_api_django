@@ -2,13 +2,38 @@ from django.db import models
 from .services import *
 
 class Payment(models.Model):
+
+    PAYMENT_STATUS = (
+        ('pending', 'Ожидает'),
+        ('completed', 'Завершен'),
+        ('failed', 'Ошибка'),
+        ('refunded', 'Возврат'),
+    )
+
     method = models.TextField(max_length=32)
-    status = models.CharField(max_length=16)
+    status = models.CharField(max_length=20, choices=PAYMENT_STATUS, default='pending')
     pay_time = models.DateTimeField(auto_created=False, null=True)
-    created_time = models.DateTimeField(auto_now=True)
-    cost = models.IntegerField()
+    created_time = models.DateTimeField(auto_now=True, editable=False)
+    processed_at = models.DateTimeField(null=True, blank=True)
+    cost = models.DecimalField(max_digits=12, decimal_places=2)
     payment_id = models.CharField(max_length=128)
     discount = models.FloatField()
+
+    # Новые поля для аналитики
+    payment_gateway = models.CharField(max_length=30)  # Платежный шлюз
+    fee = models.DecimalField(max_digits=10, decimal_places=2)  # Комиссия
+    currency = models.CharField(max_length=3, default="RUB")  # Валюта платежа
+    chargeback_status = models.BooleanField(default=False)  # Возврат средств
+    risk_score = models.FloatField(null=True)  # Оценка риска (антифрод)
+    
+    @property
+    def amount(self): return self.cost
+
+    @property
+    def payment_gateway(self): return self.method
+
+    def __str__(self):
+        return f"{self.payment_id} | статус {self.status}"
 
     class Meta:
         verbose_name = 'Платёж'  # Имя модели в единственном числе
@@ -26,7 +51,6 @@ class Payment(models.Model):
         
         Payment.objects.create(
             method = method.name,
-            status = "started",
             cost = cost,
             payment_id = method.id, 
             discount=discount

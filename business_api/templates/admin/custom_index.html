@@ -1,0 +1,74 @@
+{% extends "admin/index.html" %}
+
+{% block content %}
+<div class="business-dashboard">
+    <div class="quick-actions">
+        <a href="/admin/your_app/product/add/" class="button">📦 Добавить товар</a>
+        <a href="/admin/your_app/promotion/add/" class="button">🎁 Создать акцию</a>
+    </div>
+
+    <div class="kpi-cards">
+        <div class="kpi-card total-sales">
+            <h3>💰 Общая выручка</h3>
+            <p>{{ kpis.total_sales|default:"0" }} ₽</p>
+        </div>
+        <div class="kpi-card active-users">
+            <h3>👥 Активные клиенты</h3>
+            <p>{{ kpis.active_users|default:"0" }}</p>
+        </div>
+    </div>
+
+    {{ block.super }}
+</div>
+
+<style>
+.business-dashboard {
+    margin: 20px;
+}
+.quick-actions {
+    margin-bottom: 30px;
+    display: flex;
+    gap: 15px;
+}
+.button {
+    background: #4CAF50;
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+.button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+.kpi-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+.kpi-card {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+    border-left: 5px solid;
+}
+.kpi-card h3 {
+    margin-top: 0;
+    color: #666;
+    font-size: 16px;
+}
+.kpi-card p {
+    font-size: 24px;
+    margin: 10px 0 0;
+    font-weight: bold;
+}
+.total-sales { border-color: #4CAF50; }
+.active-users { border-color: #2196F3; }
+</style>
+{% endblock %}
