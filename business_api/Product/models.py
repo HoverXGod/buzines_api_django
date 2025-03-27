@@ -250,19 +250,23 @@ class Cart(models.Model):
         promo_discounts = Promotion.objects.filter(
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
         
         personal_discounts = PersonalDiscount.objects.filter(
             user=user,
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
 
         group_discounts = GroupPromotion.objects.filter(
             user_group_id__in=UserGroup.get_user_groups__id(user),
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
+
+        promo_dict = list()
+        personal_dict = list()
+        group_dict = list()
 
         # Создаем словари для быстрого доступа
         promo_dict = {pd['product_id']: {"discount": pd['max_discount'], "promotion": pd['name']} for pd in promo_discounts}
@@ -278,7 +282,6 @@ class Cart(models.Model):
 
         for item in cart_items:
             product_dict[shag] = dict()
-            shag += 1
 
             product = item.product
             quanity = item.quanity
@@ -298,7 +301,34 @@ class Cart(models.Model):
             promo_disc = promo_dict.get(product.id, 0)
             personal_disc = personal_dict.get(product.id, 0)
             group_disc = group_dict.get(product.id, 0)
-            max_disc = min(max(promo_disc['discount'], max(personal_disc['discount'], group_disc['discount'])), 50)  # Ограничение до 50%
+
+            discounts = [
+                promo_disc,
+                personal_disc,
+                group_disc
+            ]
+
+            valid_discounts = [
+                item for item in discounts 
+                if isinstance(item, dict) and "discount" in item
+            ]
+            valid_discounts.sort(key=lambda x: x["discount"], reverse=True)
+
+
+            discounts = valid_discounts
+
+            if discounts[0]['promotion'] == promo_disc['promotion'] and discounts[0]['discount'] == promo_disc['discount']: 
+                promo = "promo"
+                disc = discounts[0]
+            elif discounts[0]['promotion'] == personal_disc['promotion'] and discounts[0]['discount'] == personal_disc['discount']: 
+                promo = "pers"
+                disc = discounts[0]
+            elif discounts[0]['promotion'] == group_disc['promotion'] and discounts[0]['discount'] == group_disc['discount']: 
+                promo = "group"
+                disc = discounts[0]
+        
+            max_disc = disc['discount']
+            promotion = disc['promotion']
 
             # Применяем скидку к товару
             discounted_price = base_price * (100 - max_disc) / 100
@@ -306,20 +336,16 @@ class Cart(models.Model):
 
             product_dict[shag]['promotion'] = "None"
 
-            for x in promo_disc:
-                if x['discount'] == max_disc:
-                    product_dict[shag]['promotion'] = x['promotion']
-            
-            for x in group_disc:
-                if x['discount'] == max_disc:
-                    product_dict[shag]['promotion'] = x['promotion']
-
-            for x in personal_disc:
-                if x['discount'] == max_disc:
-                    product_dict[shag]['promotion'] = x['promotion'] 
+            if promo=='promo':
+                product_dict[shag]['promotion'] = Promotion.objects.get(name=promotion, discount = max_disc)
+            elif promo=='group':
+                product_dict[shag]['promotion'] = GroupPromotion.objects.get(name=promotion, discount = max_disc)
+            elif promo=='pers':
+                product_dict[shag]['promotion'] = PersonalDiscount.objects.get(name=promotion, discount = max_disc)
 
             product_dict[shag]['price'] = base_price
             product_dict[shag]['discount'] = base_price - discounted_price
+            shag += 1
 
         # Обработка промокода
         promo_discount = 0

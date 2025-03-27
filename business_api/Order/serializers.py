@@ -12,7 +12,7 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         depth = 1
-        fields = ['id', 'payment', 'user', 'date', 'dilivery', 'dilivery_status', 'products',
+        fields = ['id', 'payment', 'user', 'date', 'delivery', 'delivery_status', 'products',
                   'chanell', 'updated_at', 'status', 'shipping_address', 'billing_address', 'notes']
 
 class SalesChanellSerializer(serializers.ModelSerializer):

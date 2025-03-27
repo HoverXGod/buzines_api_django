@@ -3,7 +3,7 @@ from BaseSecurity.permissions import isSuperUser, isAutorized
 from BaseSecurity.services import SecureResponse
 from .serializers import *
 from .models import *
-from User.models import User
+from Order.models import Order
 
 class CancelPayment(APIView): 
     
@@ -29,7 +29,9 @@ class CheckStatus(APIView):
 
     def get(self, request):
 
-        answer = Payment.objects.get(id=request.GET['payment_id']).check__status()
+        payment = Payment.objects.get(id=request.GET['payment_id'])
+
+        answer = Order.objects.get(payment=payment).update_status()
 
         try:    
             return SecureResponse(

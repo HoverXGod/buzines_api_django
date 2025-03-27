@@ -3,7 +3,9 @@ from django.db import models
 from django.db.models import Index, F, Sum, Avg
 from User.models import User
 from Product.models import Product, Category
-from Order.models import Order, Payment, OrderItem
+from Order.models import Order, OrderItem
+from Payment.models import Payment
+from .managers import *
 
 class SalesFunnel(models.Model):
     """Воронка продаж с детализацией по этапам"""
@@ -20,13 +22,15 @@ class SalesFunnel(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
     stage = models.CharField(max_length=20, choices=STAGE_CHOICES)
     timestamp = models.DateTimeField(auto_now_add=True)
-    session_data = models.JSONField(default=dict)
+    session_data = models.JSONField(default=dict, blank=True, null=True)
     device_type = models.CharField(max_length=20, choices=[
         ('mobile', 'Мобильный'),
         ('desktop', 'Десктоп'),
         ('tablet', 'Планшет')
-    ])
-    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True)  # Добавлено
+    ], null=True, blank=True)
+    order_item = models.ForeignKey(OrderItem, on_delete=models.SET_NULL, null=True, blank=True)  # Добавлено
+
+    objects = SalesFunnelManager()
 
     class Meta:
         indexes = [
@@ -42,6 +46,45 @@ class SalesFunnel(models.Model):
 
     def __str__(self):
         return f"{self.user} - {self.stage}"
+    
+    def get_conversion_time(self, target_stage):
+        """
+        Получение времени конверсии до целевого этапа
+        """
+        target_entry = self.__class__.objects.filter(
+            user=self.user,
+            product=self.product,
+            stage=target_stage,
+            timestamp__gt=self.timestamp
+        ).first()
+        
+        if target_entry:
+            return target_entry.timestamp - self.timestamp
+        return None
+
+    def get_related_metrics(self):
+        """
+        Получение связанных метрик продукта
+        """
+        from .models import ProductPerformance
+        return ProductPerformance.objects.filter(
+            product=self.product,
+            date=self.timestamp.date()
+        ).first()
+
+    def to_dict(self):
+        """
+        Сериализация в словарь
+        """
+        return {
+            'id': self.id,
+            'user_id': self.user.id if self.user else None,
+            'product_id': self.product.id if self.product else None,
+            'stage': self.stage,
+            'timestamp': self.timestamp.isoformat(),
+            'device_type': self.device_type,
+            'session_data': self.session_data
+        }
 
 class CustomerLifetimeValue(models.Model):
     """Пожизненная ценность клиента (LTV)"""

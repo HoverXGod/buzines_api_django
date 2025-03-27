@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'import_export',
     'Analytics',
+    'django_user_agents',
     
 ]
 
@@ -67,6 +68,7 @@ MIDDLEWARE = [
 
     'BaseSecurity.middlewares.AuthenticationMiddleware',
     'BaseSecurity.middlewares.AuditLogMiddleware',
+    'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
 REST_FRAMEWORK = {       

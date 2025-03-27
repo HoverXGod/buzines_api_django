@@ -165,3 +165,21 @@ class JWT_auth:
                         from Api_Keys.utils import ApiManager
                         return ApiManager.get_super_api_key(api_key=request.META['API key'])._generate_jat()
                     except: return None
+
+def get_client_ip(request):
+    # Список возможных заголовков, в которых может быть IP
+    ip_headers = [
+        'HTTP_X_FORWARDED_FOR',  # Стандартный для прокси
+        'HTTP_X_REAL_IP',        # Альтернативный (например, Nginx)
+        'HTTP_CF_CONNECTING_IP', # Cloudflare
+        'REMOTE_ADDR',           # Последний fallback
+    ]
+    
+    for header in ip_headers:
+        ip = request.META.get(header)
+        if ip:
+            if header == 'HTTP_X_FORWARDED_FOR':
+                ip = ip.split(',')[0].strip()  # Берем первый IP из списка
+            return ip
+    
+    return None

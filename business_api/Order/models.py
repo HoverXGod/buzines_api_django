@@ -97,40 +97,72 @@ class Order(models.Model):
         order = Order.objects.last()
 
         for item in product_dict:
-            OrderItem.objects.create(
+            order_item = OrderItem.objects.create(
                 order = order,
-                product = item['product'],
-                quanity = item['quanity'],
-                price = item['price'],
-                discount = item['discount'],
-                promotion = item['promotion'],
+                product = product_dict[item]['product'],
+                quanity = product_dict[item]['quanity'],
+                price = product_dict[item]['price'],
+                discount = product_dict[item]['discount'],
+                promotion_name = product_dict[item]['promotion'].name,
+                promotion_type = product_dict[item]['promotion'].__class__
             )
+
+        from Analytics.models import SalesFunnel
+
+        for item in order.items.all():
+
+            try:
+                SalesFunnel.objects.add_entry(
+                    user=request.user,
+                    product=item.product,
+                    stage='checkout',
+                    session_data={}
+                    )
+            except :pass
+            
 
         Cart.delete_user_cart(user)
 
         return order
     
-    def cancel_order(self, method_name) -> bool: 
+    def cancel_order(self) -> bool: 
         """Возврат средств, возвращат успешность выполнения функции"""
 
-        answer = self.payment.cancel_payment(method_name)
+        answer = self.payment.cancel_payment()
         self.delete()
         
         return answer
     
-    def update_status(self, method_name) -> str:
+    def update_status(self) -> str:
         """Возвращает и обновляет статус платежа"""
 
-        return self.payment.check__status(method_name)
+        status = self.payment.check__status()
     
+        
+        from Analytics.models import SalesFunnel
+
+        if self.payment.is_payment:
+            for item in self.items.all():
+                try:
+                    SalesFunnel.objects.add_entry(
+                        user=self.user,
+                        product=item.product,
+                        stage='payment',
+                        session_data={}
+                        )
+                except: pass
+
+        return status
+
 class OrderItem(models.Model):
 
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.PROTECT)
-    quantity = models.PositiveIntegerField(default=1)
+    quanity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
     promotion_name = models.CharField(max_length=32)
+    promotion_type = models.CharField(max_length=32)
 
     def __str__(self):
         return f"{self.product__name} * {self.quantity}"

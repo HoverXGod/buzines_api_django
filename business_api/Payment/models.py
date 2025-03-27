@@ -53,7 +53,8 @@ class Payment(models.Model):
             method = method.name,
             cost = cost,
             payment_id = method.id, 
-            discount=discount
+            discount=discount,
+            fee = 0
         )
 
         return Payment.objects.last()

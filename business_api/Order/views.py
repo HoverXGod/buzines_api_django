@@ -69,7 +69,21 @@ class StartOrder(APIView):
 
     def get(self, request):
 
-        return SecureResponse(
+        try:    
+            return SecureResponse(
+                request=request,
+                data=self.serializer_class(
+                    instance=Order.create__order(
+                        request=request,
+                        promo=request.GET['promocode'],
+                        method_name=request.GET['method_name'],
+                        ),
+                    ).data,
+                status=200
+                )
+        except: 
+            try:    
+                return SecureResponse(
                     request=request,
                     data=self.serializer_class(
                         instance=Order.create__order(
@@ -80,32 +94,8 @@ class StartOrder(APIView):
                         ).data,
                     status=200
                     )
-
-        # try:    
-        #     return SecureResponse(
-        #         request=request,
-        #         data=self.serializer_class(
-        #             instance=Order.create__order(
-        #                 promo=request.GET['promocode'],
-        #                 method_name=request.GET['method_name'],
-        #                 ),
-        #             ).data,
-        #         status=200
-        #         )
-        # except: 
-        #     try:    
-        #         return SecureResponse(
-        #             request=request,
-        #             data=self.serializer_class(
-        #                 instance=Order.create__order(
-        #                     promo="",
-        #                     method_name=request.GET['method_name'],
-        #                     ),
-        #                 ).data,
-        #             status=200
-        #             )
-        #     except:
-        #         return SecureResponse(request=request, status=400)
+            except:
+                return SecureResponse(request=request, status=400)
             
 class GetOrder(APIView): 
     

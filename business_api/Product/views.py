@@ -3,6 +3,9 @@ from BaseSecurity.permissions import isSuperUser, isAutorized
 from BaseSecurity.services import SecureResponse
 from .serializers import *
 from .models import *
+from Analytics.models import SalesFunnel
+from BaseSecurity.utils import get_client_ip
+
 
 class GetProductsCategory(APIView): 
     
@@ -51,6 +54,30 @@ class GetProduct(APIView):
         product_id = request.GET['product_id']
 
         try:
+            try:
+                if request.user.is_authenticated:
+                    user_agent = request.user_agent
+
+                    # Проверяем тип устройства
+                    if user_agent.is_mobile:
+                        device_type = "mobile"
+                    elif user_agent.is_tablet:
+                        device_type = "tablet"
+                    elif user_agent.is_pc:
+                        device_type = "desktop"
+                    else: device_type = None
+
+                    SalesFunnel.objects.add_entry(
+                        user=request.user,
+                        product=Product.objects.get(id = product_id),
+                        stage='view',
+                        device_type=device_type,
+                        session_data={
+                            'ip': get_client_ip(request),
+                        }
+                        )
+            except: pass
+
             return SecureResponse(
                 request=request,
                 data=self.serializer_class(
@@ -61,7 +88,7 @@ class GetProduct(APIView):
                     ).data,
                 status=200
                 )
-        except: 
+        except:
             return SecureResponse(request=request, status=400)
 
 class UpdateProduct(APIView): 
@@ -107,8 +134,7 @@ class CreateProduct(APIView):
                 pr = Product.create_product(name, description, price, category)
         except: return SecureResponse(request=request, status=400)
         
-        return SecureResponse(request=request,data=self.serializer_class(instance=pr).data, status=200)
-        
+        return SecureResponse(request=request,data=self.serializer_class(instance=pr).data, status=200)   
 
 class AddImageProduct(APIView): 
     
@@ -275,6 +301,31 @@ class AddProductInCart(APIView):
         except: quanity = 1
 
         try:
+
+            try:
+                if request.user.is_authenticated:
+                    user_agent = request.user_agent
+
+                    # Проверяем тип устройства
+                    if user_agent.is_mobile:
+                        device_type = "mobile"
+                    elif user_agent.is_tablet:
+                        device_type = "tablet"
+                    elif user_agent.is_pc:
+                        device_type = "desktop"
+                    else: device_type = None
+
+                    SalesFunnel.objects.add_entry(
+                        user=request.user,
+                        product=product,
+                        stage='cart',
+                        device_type=device_type,
+                        session_data={
+                            'ip': get_client_ip(request),
+                        }
+                        )
+            except : pass
+
             return SecureResponse(
                 request=request, 
                 data=self.serializer_class(

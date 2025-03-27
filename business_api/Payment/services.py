@@ -25,7 +25,7 @@ class BaseMethod:
     def create_payment(self, *args, **kwargs): 
         self.id = gen_id()
 
-    def check_status(self): return
+    def check_status(self): return "succesfull"
     
     def cancel_payment(self): return
 
