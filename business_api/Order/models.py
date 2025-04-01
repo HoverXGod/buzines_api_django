@@ -87,7 +87,8 @@ class Order(models.Model):
                 cost,
                 request,
                 products,
-                discount
+                discount,
+                user
                 ),
             products = Cart.get_user_cart_id(user=user).split(','),
             delivery = "",
@@ -107,7 +108,11 @@ class Order(models.Model):
                 promotion_type = product_dict[item]['promotion'].__class__
             )
 
-        from Analytics.models import SalesFunnel
+        from Analytics.models import SalesFunnel, CustomerLifetimeValue
+
+        try:
+            CustomerLifetimeValue.objects.create_clv(user = user)
+        except: pass
 
         for item in order.items.all():
 
@@ -120,6 +125,8 @@ class Order(models.Model):
                     )
             except :pass
             
+        from django.core.management import call_command
+        call_command('init_cohort')
 
         Cart.delete_user_cart(user)
 
@@ -157,7 +164,7 @@ class Order(models.Model):
 class OrderItem(models.Model):
 
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.PROTECT)
+    product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='orders')
     quanity = models.PositiveIntegerField(default=1)
     price = models.DecimalField(max_digits=10, decimal_places=2)
     discount = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -165,7 +172,11 @@ class OrderItem(models.Model):
     promotion_type = models.CharField(max_length=32)
 
     def __str__(self):
-        return f"{self.product__name} * {self.quantity}"
+        return f"{self.product.name} * {self.quanity}"
+    
+    @property
+    def date(self):
+        return self.order.date
 
     class Meta:
         indexes = [

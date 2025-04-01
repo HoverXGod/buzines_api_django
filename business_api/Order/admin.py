@@ -6,7 +6,7 @@ from django.utils.html import format_html
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
-    fields = ('product', 'quantity', 'price')
+    fields = ('product', 'quanity', 'price')
     readonly_fields = ('price',)
 
 @admin.register(Order)

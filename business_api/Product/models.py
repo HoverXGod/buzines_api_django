@@ -1,6 +1,6 @@
 from django.db import models
 from django.db.models import Max
-from User.models import User, UserGroup, UserGroupItem
+from User.models import User, UserGroup
 
 class Category(models.Model):
     """Модель категори к которой относятся товары"""
@@ -71,7 +71,7 @@ class Product(models.Model):
     weight = models.FloatField(default=0)
     by_weight = models.BooleanField(default=False)
     image = models.CharField(max_length=256, default='', null=True)
-    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     is_active = models.BooleanField(default=True)
     weight_start = models.FloatField()
     weight_end = models.FloatField()
@@ -150,6 +150,12 @@ class Product(models.Model):
         bufer = self
         self.delete()
         return bufer
+    
+    def add_view(self):
+        self.analysis.add_view()
+
+    def add_cart(self):
+        self.analysis.add_cart()
     
 class Cart(models.Model):
     """Хранение товаров пользователей"""

@@ -1,0 +1,16 @@
+div[style*="background:"] {
+    height: 20px;
+    text-align: center;
+    color: white;
+    border-radius: 3px;
+    font-size: 0.9em;
+    padding: 2px 0;
+}
+
+/* Адаптивность для мобильных */
+@media (max-width: 768px) {
+    .metrics-table td {
+        padding: 4px;
+        font-size: 0.9em;
+    }
+}

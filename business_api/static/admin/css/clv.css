@@ -1,0 +1,7 @@
+visualization div {
+    background: #79aec8;
+    margin: 5px 0;
+    padding: 3px;
+    color: white;
+    transition: width 0.5s;
+}

@@ -1,5 +1,5 @@
 # analytics/models.py
-from django.db import models
+from django.db import models, transaction
 from django.db.models import Index, F, Sum, Avg
 from User.models import User
 from Product.models import Product, Category
@@ -37,6 +37,8 @@ class SalesFunnel(models.Model):
             models.Index(fields=['stage', 'timestamp']),
             models.Index(fields=['user', 'product'])
         ]
+        verbose_name_plural = 'Воронки продаж'
+        verbose_name = verbose_name_plural
 
     def get_product_performance(self):
         return ProductPerformance.objects.get(
@@ -96,15 +98,21 @@ class CustomerLifetimeValue(models.Model):
     category_spend = models.DecimalField(max_digits=12, decimal_places=2)
     last_updated = models.DateTimeField(auto_now=True)
 
+    objects = CustomerLifetimeValueManager()
+
     def calculate_clv(self):
-        return self.avg_order_value * self.purchase_frequency * 12  # На год
+        return round(float(self.avg_order_value) * self.purchase_frequency * 12, 2)  # На год
 
     def __str__(self):
         return f"LTV {self.user}"
+    
+    class Meta:
+        verbose_name_plural = 'Пожизненная ценность пользователей'
+        verbose_name = verbose_name_plural
 
 class ProductPerformance(models.Model):
     """Анализ эффективности товаров"""
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    product = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='analysis')
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     date = models.DateField()
     
@@ -117,7 +125,9 @@ class ProductPerformance(models.Model):
     }""")
     total_units_sold = models.PositiveIntegerField(default=0)
     avg_selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    discount_impact = models.DecimalField(max_digits=5, decimal_places=2)  # Влияние скидок
+    discount_impact = models.DecimalField(max_digits=5, decimal_places=2)
+    
+    objects = PerformanceManager()
     
     class Meta:
         indexes = [
@@ -125,44 +135,80 @@ class ProductPerformance(models.Model):
             models.Index(fields=['avg_selling_price'])
         ]
 
+        verbose_name_plural = 'Анализ продуктов'
+        verbose_name = verbose_name_plural
+
     def update_metrics(self):
-        # Агрегация данных из OrderItem
+        """Метод оставлен для совместимости, вызывается из менеджера"""
+
         items = OrderItem.objects.filter(
-            product=self.product,
-            order__created_at__date=self.date
+            product=self.product
         ).aggregate(
-            total_units=Sum('quantity'),
-            avg_price=Avg('price_at_purchase'),
-            total_discount=Sum('applied_discount')
+            total_units=Sum('quanity'),
+            avg_price=Avg('price'),
+            total_discount=Sum('discount')
         )
+
+        purchases = OrderItem.objects.filter(
+            product=self.product,
+        ).values('order')
+
+        values = [item['order'] for item in purchases]
+
+        count = 0
+        for item in Order.objects.filter(id__in=values):
+            if item.payment.is_payment:
+                count += 1
         
+        self.metrics['purchases'] = count
         self.total_units_sold = items['total_units'] or 0
-        self.avg_selling_price = items['avg_price'] or 0
-        self.discount_impact = items['total_discount'] or 0
+        self.avg_selling_price = items['avg_price'] or Decimal('0.00')
+        self.discount_impact = items['total_discount'] or Decimal('0.00')
+        self.metrics['stock_level'] = self.product.stock
+
+    def add_view(self):
+        self.metrics['views'] = self.metrics['views'] + 1
+        self.save()
+
+    def add_cart(self):
+        self.metrics['cart_adds'] + self.metrics['cart_adds'] + 1
         self.save()
 
     def update_conversion_rate(self):
-        total_views = self.metrics.get('views', 1)
-        self.metrics['conversion_rate'] = round(
-            self.metrics.get('purchases', 0) / total_views * 100, 2
+        """Обновление коэффициента конверсии"""
+        self.metrics['conversion_rate'] = PerformanceManager._calculate_conversion_rate(
+            self.metrics.get('purchases', 0),
+            self.metrics.get('views', 1)
         )
-        self.save()
+
+
 
     def __str__(self):
         return f"{self.product} - {self.date}"
 
 class CohortAnalysis(models.Model):
-    """Когортный анализ с привязкой к категориям"""
-    cohort_date = models.DateField()
-    retention_day = models.PositiveIntegerField()
-    primary_category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True)
+    """Автоматический когортный анализ"""
+    cohort_date = models.DateField(help_text="Дата формирования когорты")
+    retention_day = models.PositiveIntegerField(help_text="День удержания")
+    primary_category = models.ForeignKey(
+        Category,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        help_text="Автоматически определяемая категория"
+    )
     
-    metrics = models.JSONField(default=dict, help_text="""{
-        'total_users': 0,
-        'active_users': 0,
-        'revenue': 0.0,
-        'avg_order_value': 0.0
+    metrics = models.JSONField(default=dict, help_text="""
+    {
+        'total_users': int,
+        'active_users': int,
+        'revenue': float,
+        'avg_order_value': float,
+        'orders_count': int,
+        'arppu': float
     }""")
+
+    objects = CohortAnalysisManager()
 
     class Meta:
         unique_together = ('cohort_date', 'retention_day', 'primary_category')
@@ -170,29 +216,91 @@ class CohortAnalysis(models.Model):
             models.Index(fields=['cohort_date', 'primary_category']),
             models.Index(fields=['retention_day'])
         ]
+        ordering = ['-cohort_date', 'retention_day']
+
+        verbose_name_plural = 'Когортный анализ'
+        verbose_name = verbose_name_plural
 
     def __str__(self):
         return f"Cohort {self.cohort_date} - Day {self.retention_day}"
 
+    @property
+    def retention_rate(self):
+        """Уровень удержания в процентах"""
+        if self.metrics.get('total_users', 0) > 0:
+            return round((self.metrics['active_users'] / self.metrics['total_users']) * 100, 2)
+        return 0.0
+    
+    def refresh_metrics(self):
+        with transaction.atomic():
+            self.delete()
+            new_entry = CohortAnalysis.objects.add_entry()
+            return new_entry
+    
 class PaymentAnalysis(models.Model):
     """Детальный анализ платежей"""
-    payment = models.OneToOneField(Payment, on_delete=models.CASCADE)
-    gateway_performance = models.FloatField(help_text="Время обработки в секундах")
-    fraud_indicators = models.JSONField(default=dict)
-    risk_score = models.FloatField(null=True)
-    chargeback_probability = models.FloatField(null=True)
+    payment = models.OneToOneField(
+        Payment,
+        on_delete=models.CASCADE,
+        related_name='analysis'
+    )
+    gateway_performance = models.FloatField(
+        null=True,
+        help_text="Время обработки в секундах"
+    )
+    fraud_indicators = models.JSONField(
+        default=dict,
+        help_text="Флаги рисков мошенничества"
+    )
+    risk_score = models.FloatField(
+        null=True,
+        help_text="Общая оценка риска (0-100)"
+    )
+    chargeback_probability = models.FloatField(
+        null=True,
+        help_text="Вероятность возврата платежа (%)"
+    )
+    analysis_timestamp = models.DateTimeField(
+        auto_now_add=True,
+        help_text="Время проведения анализа"
+    )
+
+    analysis_date = models.DateField(auto_now=True)
+
+    objects = PaymentAnalysisManager()
 
     class Meta:
         indexes = [
             models.Index(fields=['risk_score']),
+            models.Index(fields=['payment']),
+            models.Index(fields=['analysis_timestamp'])
         ]
+        verbose_name = 'Анализ платежа'
+        verbose_name_plural = 'Анализы платежей'
 
     def __str__(self):
-        return f"Анализ платежа #{self.payment.id}"
+        return f"Анализ #{self.payment.payment_id}"
+
+    @property
+    def risk_category(self):
+        """Категоризация риска с градациями"""
+        if self.risk_score < 25:
+            return "Низкий"
+        elif self.risk_score < 50:
+            return "Умеренный"
+        elif self.risk_score < 75:
+            return "Высокий"
+        return "Критический"
+
+    def refresh_analysis(self):
+        """Обновление анализа"""
+        self.delete()
+        return self.objects.add_entry(self.payment)
 
 class OrderAnalytics(models.Model):
     """Расширенная аналитика заказов"""
     order = models.OneToOneField(Order, on_delete=models.CASCADE)
+    time_performance = models.FloatField(default=1, help_text="Время обработки в секундах")
     margin = models.DecimalField(max_digits=12, decimal_places=2)
     acquisition_source = models.CharField(max_length=100)
     customer_journey = models.JSONField(default=dict)

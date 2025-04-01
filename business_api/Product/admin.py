@@ -31,7 +31,7 @@ class ProductAdmin(BaseAdmin):
     price_rub.short_description = "Цена"
 
     def stock_status(self, obj):
-        return "✅ В наличии" if obj.is_active else "⛔ Нет в наличии"
+        return f"✅ В наличии: {obj.stock}" if obj.is_active and not obj.stock == 0 else "⛔ Нет в наличии"
     stock_status.short_description = "Наличие"
 
     def category_badge(self, obj):

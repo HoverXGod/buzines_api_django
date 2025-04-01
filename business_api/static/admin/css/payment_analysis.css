@@ -1,0 +1,13 @@
+.risk-indicator {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.9em;
+    display: inline-block;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+    .fraud-indicators {
+        column-count: 1 !important;
+    }
+}

@@ -27,6 +27,9 @@ class User(AbstractUser):
         verbose_name = 'Пользователь'  # Имя модели в единственном числе
         verbose_name_plural = 'Пользователи'  # Имя модели во множественном числе
 
+    @property
+    def default_currency(self): return self.currency
+
     def short_name(self):
         return f"{self.first_name} {self.last_name}"
     
