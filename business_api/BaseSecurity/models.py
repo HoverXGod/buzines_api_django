@@ -5,7 +5,7 @@ from User.models import User
 class AuditLog(models.Model):
     """Модель аудита, нужен для отладки и проверки пользователей"""
 
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='visits')
     action = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.JSONField()

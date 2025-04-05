@@ -2,6 +2,7 @@ from django.db import models
 from Payment.models import Payment
 from User.models import User
 from Product.models import Cart, Product
+from Analytics.utils import process_order_item
 
 class SalesChannel(models.Model):
     name = models.CharField(max_length=32)
@@ -107,6 +108,7 @@ class Order(models.Model):
                 promotion_name = product_dict[item]['promotion'].name,
                 promotion_type = product_dict[item]['promotion'].__class__
             )
+            process_order_item(order_item)
 
         from Analytics.models import SalesFunnel, CustomerLifetimeValue
 

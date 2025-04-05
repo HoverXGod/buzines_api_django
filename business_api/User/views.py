@@ -5,7 +5,7 @@ from .serializers import UserSerializer, UserGroupSerializer
 from Api_Keys.serializers import ApiKeySerializer
 from Api_Keys.models import Api_key
 from .models import User, UserGroup
-from Analytics.models import CustomerLifetimeValue
+from Analytics.models import CustomerLifetimeValue, CustomerBehavior
 from django.core.management import call_command
 
 from drf_spectacular.settings import spectacular_settings
@@ -65,6 +65,7 @@ class RegisterUser(APIView):
         if answer == None: return SecureResponse(request=request, status=400)
 
         CustomerLifetimeValue.objects.create_clv(user = answer)
+        CustomerBehavior.objects.create(user = answer)
 
         return SecureResponse(
             request=request, 
@@ -72,7 +73,7 @@ class RegisterUser(APIView):
                 "JWTCloudeToken":jwt_token, 
                 "User data": self.serializer_class(instance=answer).data
                 }, 
-            status=200
+            status=201
             )
 
 
@@ -91,8 +92,14 @@ class loginUser(APIView):
 
         call_command('init_cohort')
 
+        from Analytics.models import OrderAnalytics
+        from Order.models import Order
+
+        for item in Order.objects.all():
+            OrderAnalytics.objects.add_entry(item)
+
         if jwt_token == None: return SecureResponse(request=request, status=400)
-        else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token})
+        else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token}, status=200)
 
 class MyProfile(APIView):
 

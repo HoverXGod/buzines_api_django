@@ -1,0 +1,83 @@
+.money-cell {
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.money-cell.positive { background: #d4edda; color: #155724; }
+.money-cell.negative { background: #f8d7da; color: #721c24; }
+
+.progress-bar {
+    background: #e9ecef;
+    height: 25px;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+}
+
+.progress-fill {
+    background: #4CAF50;
+    height: 100%;
+    padding-left: 10px;
+    color: white;
+    display: flex;
+    align-items: center;
+    min-width: 20%;
+}
+
+.delivery-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-weight: 500;
+}
+
+.delivery-badge.green { background: #d4edda; color: #155724; }
+.delivery-badge.orange { background: #fff3cd; color: #856404; }
+.delivery-badge.red { background: #f8d7da; color: #721c24; }
+
+.popularity-rating {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #dc3545;
+}
+
+.return-meter {
+    width: 80%;
+    height: 10px;
+    background: repeating-linear-gradient(
+        45deg,
+        #ddd,
+        #ddd 10px,
+        #eee 10px,
+        #eee 20px
+    );
+    position: relative;
+}
+
+.return-meter::after {
+    content: attr(data-value);
+    position: absolute;
+    right: -40px;
+    top: -5px;
+}
+
+.product-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 10px;
+}
+
+.cross-sell-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #e2e3e5;
+    padding: 3px 10px;
+    border-radius: 12px;
+}

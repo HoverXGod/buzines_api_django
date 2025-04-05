@@ -6,7 +6,7 @@ from .models import *
 from Analytics.models import SalesFunnel
 from BaseSecurity.utils import get_client_ip
 from django.core.management import call_command
-
+from Analytics.models import CustomerBehavior
 
 class GetProductsCategory(APIView): 
     
@@ -15,6 +15,9 @@ class GetProductsCategory(APIView):
 
     def get(self, request):
         category_name = request.GET['category_name']
+
+        if request.user.is_authenticated:
+            CustomerBehavior.objects.get(user = request.user).add_view()
 
         try:    
             return SecureResponse(
@@ -37,6 +40,8 @@ class GetAllProducts(APIView):
     serializer_class = ProductSerializer
 
     def get(self, request):
+        if request.user.is_authenticated:
+            CustomerBehavior.objects.get(user = request.user).add_view()
         return SecureResponse(
             request=request,
             data=self.serializer_class(
@@ -53,6 +58,8 @@ class GetProduct(APIView):
 
     def get(self, request):
         product_id = request.GET['product_id']
+        if request.user.is_authenticated:
+            CustomerBehavior.objects.get(user = request.user).add_view()
 
         try: item = Product.objects.get(
                         id=product_id
@@ -288,7 +295,7 @@ class CreatePromocode(APIView):
         
 class AddProductInCart(APIView): 
     
-    permission_classes = []
+    permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
     def get(self, request):
@@ -296,6 +303,8 @@ class AddProductInCart(APIView):
         product = Product.objects.get(id=request.GET['product_id'])
 
         product.add_cart()
+
+        CustomerBehavior.objects.get(user = request.user).cart_action()
 
         try:
             quanity = request.GET['weight_quanity']
@@ -485,6 +494,8 @@ class RemoveProductInUserCart(APIView):
 
     def get(self, request):
 
+        CustomerBehavior.objects.get(user = request.user).cart_action()
+
         try:
 
             object = Cart.objects.get(id=request.GET['id'], user=request.user)
@@ -503,9 +514,11 @@ class RemoveUserCart(APIView):
     permission_classes = [isAutorized]
     serializer_class = None
 
-    def get(self, request):
+    def get(self, request):  
 
         try:
+
+            CustomerBehavior.objects.get(user = request.user).cart_action()
 
             objects = Cart.objects.get(user=request.user)
 

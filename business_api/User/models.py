@@ -22,6 +22,7 @@ class User(AbstractUser):
     address = models.TextField(max_length=256, default='')
     currency = models.CharField(max_length=3, default='RUB')
     user_type = models.CharField(max_length=20, choices=USER_TYPE_CHOICES, default='customer')
+    acquisition_source = models.CharField(max_length=64, default='unknown')
 
     class Meta:
         verbose_name = 'Пользователь'  # Имя модели в единственном числе

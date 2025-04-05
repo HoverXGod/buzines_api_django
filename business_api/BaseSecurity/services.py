@@ -5,7 +5,7 @@ from User.models import User
 
 class SecureResponse(Response):
     
-    def __init__(self, request, data=None, status=201, headers=None, content_type=None):
+    def __init__(self, request, data=None, status=200, headers=None, content_type=None):
 
         if status != 201 and status != 200:
             if data == None or data == '' or data == ' ':

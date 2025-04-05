@@ -3,6 +3,8 @@ from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.http import HttpResponse
 from .forms import ProductPerformanceForm
+from django.contrib.admin import SimpleListFilter
+from django_json_widget.widgets import JSONEditorWidget  
 from .models import *
 import json, csv
 
@@ -587,7 +589,9 @@ class PaymentAnalysisAdmin(admin.ModelAdmin):
             obj.payment.needs_review = True
             obj.payment.save()
         self.message_user(request, f"{queryset.count()} платежей отправлено на проверку")
-    
+    flag_for_review.short_description = 'Пометить для проверки'
+
+
     # Настройки интерфейса
     date_hierarchy = 'analysis_timestamp'
     list_per_page = 25
@@ -596,4 +600,550 @@ class PaymentAnalysisAdmin(admin.ModelAdmin):
     class Media:
         css = {
             'all': ('admin/css/payment_analysis.css',)
+        }
+
+@admin.register(OrderAnalytics)
+class OrderAnalyticsAdmin(admin.ModelAdmin):
+    # Настройки списка
+    list_display = [
+        'order_link',
+        'margin_display',
+        'acquisition_source',
+        'churn_risk_level',
+        'top_products',
+        'basket_diversity'
+    ]
+    
+    list_filter = [
+        'acquisition_source',
+        ('order__date', admin.DateFieldListFilter)
+    ]
+    
+    search_fields = ['order__id', 'order__user__email']
+    
+    # Детальный просмотр
+    fieldsets = (
+        ('Основная информация', {
+            'fields': (
+                'order_link',
+                'margin_display',
+                'acquisition_source'
+            ),
+            'classes': ('wide',)
+        }),
+        ('Прогнозы и риски', {
+            'fields': (
+                'churn_risk_level',
+                'customer_journey_display'
+            ),
+            'classes': ('collapse',)
+        }),
+        ('Товарная аналитика', {
+            'fields': (
+                'basket_diversity',
+            ),
+            'classes': ('wide',)
+        }),
+    )
+    
+    readonly_fields = [
+        'order_link',
+        'margin_display',
+        'churn_risk_level',
+        'customer_journey_display',
+        'basket_diversity'
+    ]
+    
+    actions = ['recalculate_metrics']
+    
+    # Кастомные методы
+    def order_link(self, obj):
+        return obj.order.id
+    order_link.short_description = 'Заказ'
+    
+    def margin_display(self, obj):
+        color = '#4CAF50' if obj.margin > 0 else '#F44336'
+        return format_html(
+            f'<div style="color: {color};">{obj.margin} ₽ ({obj.margin_percentage:.1f}%)</div>'
+        )
+    margin_display.short_description = 'Маржинальность'
+    
+    def churn_risk_level(self, obj):
+        colors = {
+            'low': '#4CAF50',
+            'medium': '#FFC107',
+            'high': '#F44336'
+        }
+        risk_level = 'low' if obj.predicted_churn_risk < 30 else 'medium' if obj.predicted_churn_risk < 70 else 'high'
+        return format_html(
+            f'<div style="background: {colors[risk_level]}; color: white; padding: 2px 8px; border-radius: 4px;">{obj.predicted_churn_risk:.1f}%</div>'    
+        )
+    churn_risk_level.short_description = 'Риск оттока'
+    
+    def top_products(self, obj):
+        products = obj.item_metrics.get('top_items', [])[:3]
+        return ", ".join([f"{p['product__name']} ({p['total_units']})" for p in products]) or 'Нет данных'
+    top_products.short_description = 'Топ товаров'
+    
+    def basket_diversity(self, obj):
+        diversity = obj.item_metrics.get('basket_diversity', 0)
+        return format_html(
+            f'''<div style="width: 100px; height: 20px; background: #eee; border-radius: 10px;">
+            <div style="width: { diversity * 100}%; height: 100%; background: #2196F3; border-radius: 10px;"></div></div>
+            <div>{diversity:.0%}</div>'''
+        )
+    basket_diversity.short_description = 'Разнообразие'
+    
+    def customer_journey_display(self, obj):
+        journey = obj.customer_journey
+        items = []
+        if journey.get('days_to_first_order'):
+            items.append(f"Первый заказ через: {journey['days_to_first_order']} дней")
+        if journey.get('pre_order_visits'):
+            items.append(f"Визитов перед заказом: {journey['pre_order_visits']}")
+        if journey.get('total_orders'):
+            items.append(f"Всего заказов: {journey['total_orders']}")
+        
+        br = '<br>'
+        
+        return format_html(
+            f'<div style="column-count: 2; column-gap: 30px;">{ br.join(items) }</div>'    
+        )
+    customer_journey_display.short_description = 'Поведение покупателя'
+    
+    def recalculate_metrics(self, request, queryset):
+        for obj in queryset:
+            OrderAnalytics.objects.add_entry(obj.order)
+        self.message_user(request, f"Обновлено {queryset.count()} записей")
+    recalculate_metrics.short_description = 'Пересчитать метрики'
+    
+    # Настройки интерфейса
+    date_hierarchy = 'order__date'
+    list_per_page = 30
+    list_select_related = True
+    show_full_result_count = False
+    
+    class Media:
+        css = {
+            'all': ('admin/css/order_analytics.css',)
+        }
+
+@admin.register(InventoryTurnover)
+class InventoryTurnoverAdmin(admin.ModelAdmin):
+    # Группировка полей для удобства ввода
+    fieldsets = ( ('Основная информация', {
+            'fields': (
+                'product', 
+                'category',
+                ('period_start', 'period_end') )
+            }
+        ),
+        ('Показатели эффективности', {
+            'fields': (
+                'stock_turnover',
+                'stockout_days',
+                'demand_forecast'
+            ),
+            'description': 'Расчетные показатели эффективности запасов'
+        }),
+    )
+
+    # Автозаполнение категории при выборе товара
+    def formfield_for_foreignkey(self, db_field, request, **kwargs):
+        if db_field.name == "category":
+            try:
+                product_id = request.GET.get('product')
+                if product_id:
+                    product = Product.objects.get(id=product_id)
+                    kwargs["queryset"] = Category.objects.filter(id=product.category.id)
+            except:
+                pass
+        return super().formfield_for_foreignkey(db_field, request, **kwargs)
+
+    # Настройка отображения списка
+    list_display = (
+        'product_link',
+        'category',
+        'period',
+        'stock_turnover_bar',
+        'stockout_days',
+        'demand_forecast'
+    )
+    
+    list_filter = (
+        ('category', admin.RelatedOnlyFieldListFilter),
+    )
+    
+    search_fields = ('product__name', 'category__name')
+    
+    readonly_fields = ('category', 'period_end', 'stock_turnover', 'stockout_days', 'demand_forecast')
+    
+    actions = ['recalculate_turnover']
+
+    # Кастомные методы для отображения
+    def product_link(self, obj):
+        url = f'admin/Product/product/{obj.product.id}/change'
+        return format_html('<a href="{}">{}</a>', url, obj.product.name)
+    product_link.short_description = 'Товар'
+
+    def period(self, obj):
+        return f"{obj.period_start.strftime('%b %Y')}"
+    period.short_description = 'Период'
+
+    def stock_turnover_bar(self, obj):
+        value = min(int(obj.stock_turnover * 20), 100)
+        return format_html(
+            '<div style="width: 100px; height: 20px; background: #ddd">'
+            '<div style="width: {}%; height: 100%; background: {};"></div></div>',
+            value, '#4CAF50' if obj.stock_turnover > 0.5 else '#FF5722'
+        )
+    stock_turnover_bar.short_description = 'Оборачиваемость'
+
+    # Действия
+    def recalculate_turnover(self, request, queryset):
+        for item in queryset:
+            item.product.calculate_turnover()
+        self.message_user(request, f"Пересчет выполнен для {queryset.count()} записей")
+    recalculate_turnover.short_description = "Пересчитать показатели"
+
+# Фильтр по месяцам для периода
+class PeriodMonthFilter(SimpleListFilter):
+    title = 'Месяц периода'
+    parameter_name = 'period_month'
+
+    def lookups(self, request, model_admin):
+        return (
+            ('current', 'Текущий месяц'),
+            ('last', 'Прошлый месяц'),
+            ('3m', 'Последние 3 месяца'),
+        )
+
+    def queryset(self, request, queryset):
+        now = timezone.now().date()
+        if self.value() == 'current':
+            return queryset.filter(period_start__month=now.month)
+        if self.value() == 'last':
+            last_month = now.replace(day=1) - timedelta(days=1)
+            return queryset.filter(period_start__month=last_month.month)
+        if self.value() == '3m':
+            three_months_ago = now - timedelta(days=90)
+            return queryset.filter(period_start__gte=three_months_ago)
+
+@admin.register(StockHistory)
+class StockHistoryAdmin(admin.ModelAdmin):
+    list_display = (
+        'product_link',
+        'change_type_icon',
+        'stock_changes',
+        'date',
+    )
+    
+    list_filter = (
+        'change_type',
+        ('date', admin.DateFieldListFilter),
+    )
+    
+    search_fields = ('product__name',)
+    
+    readonly_fields = ('previous_stock', 'new_stock', 'date')
+    
+    fieldsets = (
+        ('Информация о товаре', {
+            'fields': ('product',)
+        }),
+        ('Изменения запасов', {
+            'fields': (
+                ('previous_stock', 'new_stock'),
+                'quantity',
+                'change_type'
+            )
+        }),
+        ('Дополнительно', {
+            'fields': ('date', 'notes'),
+            'classes': ('collapse',)
+        }),
+    )
+
+    def product_link(self, obj):
+        url = f'admin/Product/product/{obj.product.id}/change'
+        return format_html('<a href="{}">{}</a>', url, obj.product.name)
+    product_link.short_description = 'Товар'
+
+    def change_type_icon(self, obj):
+        icons = {
+            'sale': '🛒',
+            'restock': '📦',
+            'adjustment': '✏️'
+        }
+        return f"{icons[obj.change_type]} {obj.get_change_type_display()}"
+    change_type_icon.short_description = 'Тип изменения'
+
+    def stock_changes(self, obj):
+        return format_html(
+            '<div style="display: flex; align-items: center; gap: 10px;">'
+            '<span style="color: #888;">{}</span>'
+            '<span style="font-size: 18px;">→</span>'
+            '<span style="color: {};">{}</span></div>',
+            obj.previous_stock,
+            '#4CAF50' if obj.new_stock > obj.previous_stock else '#FF5722',
+            obj.new_stock
+        )
+    stock_changes.short_description = 'Изменение запасов'
+
+@admin.register(OrderItemAnalytics)
+class OrderItemAnalyticsAdmin(admin.ModelAdmin):
+    list_display = [
+        'order_item_info',
+        'margin_display',
+        'profitability_index_display',
+        'delivery_status',
+        'popularity_badge',
+        'return_rate_display',
+        'cross_sell_count'
+    ]
+    
+    list_filter = [
+        'delivery_time',
+        ('profitability_index', admin.RangeFilter),
+        'cross_sell_products'
+    ]
+    
+    search_fields = [
+        'order_item__product__name',
+        'order_item__order__user__email'
+    ]
+    
+    fieldsets = (
+        ('Финансовые показатели', {
+            'fields': ('margin', 'profitability_index'),
+            'description': '💰 <strong>Экономические метрики товара:</strong>'
+        }),
+        ('Логистика', {
+            'fields': ('delivery_time',),
+            'description': '🚚 <strong>Данные о доставке:</strong>'
+        }),
+        ('Поведенческие метрики', {
+            'fields': ('popularity_score', 'return_rate'),
+            'description': '📊 <strong>Аналитика спроса и возвратов:</strong>'
+        }),
+        ('Рекомендации', {
+            'fields': ('cross_sell_products',),
+            'description': '🛍️ <strong>Сопутствующие товары:</strong>'
+        })
+    )
+    
+    filter_horizontal = ['cross_sell_products']
+    autocomplete_fields = ['order_item']
+    readonly_fields = ['last_updated']
+    actions = ['update_metrics']
+    list_per_page = 30
+    list_select_related = ['order_item', 'order_item__product']
+    
+    class Media:
+        css = {
+            'all': (
+                'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+                'admin/css/analytics.css'
+            )
+        }
+
+    @admin.display(description='Товар в заказе')
+    def order_item_info(self, obj):
+        product = obj.order_item.product
+        return format_html(
+            '<div class="product-card">'
+            '<i class="fas fa-box-open"></i>'
+            '<div>'
+            '<h4>{}</h4>'
+            '<small>Заказ #{} · {} шт</small>'
+            '</div>'
+            '</div>',
+            product.name,
+            obj.order_item.order.id,
+            obj.order_item.quantity
+        )
+
+    @admin.display(description='Маржа', ordering='margin')
+    def margin_display(self, obj):
+        return format_html(
+            '<div class="money-cell {}">{:.2f} ₽</div>',
+            'positive' if obj.margin > 0 else 'negative',
+            obj.margin
+        )
+
+    @admin.display(description='Рентабельность', ordering='profitability_index')
+    def profitability_index_display(self, obj):
+        return format_html(
+            '<div class="progress-bar">'
+            '<div class="progress-fill" style="width: {}%">{:.1f}%</div>'
+            '</div>',
+            min(obj.profitability_index, 100),
+            obj.profitability_index
+        )
+
+    @admin.display(description='Доставка', ordering='delivery_time')
+    def delivery_status(self, obj):
+        if obj.delivery_time <= 3:
+            icon = 'fa-rocket'
+            text = 'Экспресс'
+            color = 'green'
+        elif obj.delivery_time <= 7:
+            icon = 'fa-truck'
+            text = 'Стандарт'
+            color = 'orange'
+        else:
+            icon = 'fa-clock'
+            text = 'Долгая'
+            color = 'red'
+        
+        return format_html(
+            '<div class="delivery-badge {}">'
+            '<i class="fas {}"></i>{}'
+            '</div>',
+            color,
+            icon,
+            text
+        )
+
+    @admin.display(description='Популярность', ordering='popularity_score')
+    def popularity_badge(self, obj):
+        return format_html(
+            '<div class="popularity-rating">'
+            '<i class="fas fa-fire"></i>'
+            '<span>{:.1f}/10</span>'
+            '</div>',
+            obj.popularity_score
+        )
+
+    @admin.display(description='Возвраты')
+    def return_rate_display(self, obj):
+        return format_html(
+            '<div class="return-meter" data-value="{}">{:.1f}%</div>',
+            obj.return_rate,
+            obj.return_rate
+        )
+
+    @admin.display(description='Сопутствующие')
+    def cross_sell_count(self, obj):
+        count = obj.cross_sell_products.count()
+        return format_html(
+            '<div class="cross-sell-count">'
+            '<i class="fas fa-link"></i>{}'
+            '</div>',
+            count
+        )
+
+    @admin.action(description='🔄 Обновить метрики')
+    def update_metrics(self, request, queryset):
+        for analytics in queryset:
+            analytics.update_popularity()
+            analytics.update_return_rate()
+        self.message_user(request, f"Обновлено {queryset.count()} записей")
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).prefetch_related('cross_sell_products')
+    
+@admin.register(CustomerBehavior)
+class CustomerBehaviorAdmin(admin.ModelAdmin):
+    # Отображение в списке
+    list_display = [
+        'user_email',
+        'last_activity',
+        'page_views',
+        'cart_actions',
+        'engagement_score',
+        'preferences_summary'
+    ]
+    
+    # Фильтры и поиск
+    list_filter = ['user__is_staff', 'last_activity']
+    search_fields = ['user__email', 'user__first_name']
+    
+    # Группировка полей в форме редактирования
+    fieldsets = (
+        ('Основная информация', {
+            'fields': (
+                'user', 
+                'last_activity',
+            ),
+            'description': 'Базовая информация о пользователе и времени активности'
+        }),
+        ('Метрики сессии', {
+            'fields': ('session_metrics',),
+            'description': '📊 <strong>Статистика взаимодействия:</strong> просмотры страниц, '
+                         'время на сайте, действия с корзиной'
+        }),
+        ('Профиль предпочтений', {
+            'fields': ('preference_profile',),
+            'description': '💡 <strong>Персональные настройки:</strong> оценка вовлеченности, '
+                         'предпочтения пользователя'
+        }),
+    )
+    
+    # Виджеты для JSON-полей
+    formfield_overrides = {
+        models.JSONField: {'widget': JSONEditorWidget(mode='tree')},
+    }
+    
+    # Автодополнение связанных полей
+    autocomplete_fields = ['user']
+    
+    # Поля только для чтения
+    readonly_fields = ['last_activity']
+    
+    # Действия в списке
+    actions = ['update_engagement_scores']
+    
+    # Настройки интерфейса
+    list_per_page = 25
+    show_full_result_count = False
+    date_hierarchy = 'last_activity'
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).select_related('user')
+
+    # Кастомные колонки в списке
+    @admin.display(description='Email пользователя', ordering='user__email')
+    def user_email(self, obj):
+        return obj.user.email
+    
+    @admin.display(description='📈 Вовлеченность')
+    def engagement_score(self, obj):
+        score = obj.preference_profile.get('engagement_score', 0)
+        color = 'green' if score > 50 else 'orange' if score > 20 else 'red'
+        return format_html(
+            '<div style="background: {}; color: white; padding: 2px 5px; border-radius: 3px; text-align: center;">{:.1f}</div>',
+            color,
+            score
+        )
+    
+    @admin.display(description='📄 Просмотры')
+    def page_views(self, obj):
+        return obj.session_metrics.get('page_views', 0)
+    
+    @admin.display(description='🛒 Действия')
+    def cart_actions(self, obj):
+        return obj.session_metrics.get('cart_actions', 0)
+    
+    @admin.display(description='⚙️ Настройки')
+    def preferences_summary(self, obj):
+        return ', '.join([f"{k}: {v}" for k, v in obj.preference_profile.items()])
+    
+    # Кастомные действия
+    @admin.action(description='🔄 Пересчитать вовлеченность')
+    def update_engagement_scores(self, request, queryset):
+        CustomerBehavior.objects.update_engagement_scores(queryset=queryset)
+        self.message_user(request, f"Обновлено {queryset.count()} записей")
+    
+    # Улучшенные подсказки
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['user'].help_text = "Выберите пользователя из системы"
+        form.base_fields['session_metrics'].help_text = "Данные автоматически собираются системой"
+        return form
+
+    # Иконка приложения
+    class Media:
+        css = {
+            'all': ('admin/css/custom.css',)
         }

@@ -75,6 +75,7 @@ class Product(models.Model):
     is_active = models.BooleanField(default=True)
     weight_start = models.FloatField()
     weight_end = models.FloatField()
+    cost_price = models.FloatField(blank=True, default=1.0)
 
     sku = models.CharField(max_length=32, unique=True, null=True)
     stock = models.PositiveIntegerField(default=0)

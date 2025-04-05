@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'import_export',
     'Analytics',
     'django_user_agents',
+    'django_json_widget',
 ]
 
 MIDDLEWARE = [

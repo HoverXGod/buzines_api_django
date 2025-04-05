@@ -298,69 +298,77 @@ class PaymentAnalysis(models.Model):
         return self.objects.add_entry(self.payment)
 
 class OrderAnalytics(models.Model):
-    """Расширенная аналитика заказов"""
-    order = models.OneToOneField(Order, on_delete=models.CASCADE)
-    time_performance = models.FloatField(default=1, help_text="Время обработки в секундах")
-    margin = models.DecimalField(max_digits=12, decimal_places=2)
-    acquisition_source = models.CharField(max_length=100)
-    customer_journey = models.JSONField(default=dict)
-    predicted_churn_risk = models.FloatField(null=True)
-    item_metrics = models.JSONField(default=dict, help_text="""
-    {
-        "top_items": [{"id": 1, "name": "Товар", "units": 5}],
-        "basket_diversity": 0.75  # Индекс разнообразия корзины
-    }
-    """)
+    """Расширенная аналитика заказов с автоматическим расчетом"""
+    order = models.OneToOneField(
+        Order,
+        on_delete=models.CASCADE,
+        related_name='analytics'
+    )
+    margin = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        help_text="Маржинальность заказа"
+    )
+    acquisition_source = models.CharField(
+        max_length=100,
+        help_text="Источник привлечения клиента"
+    )
+    customer_journey = models.JSONField(
+        default=dict,
+        help_text="Данные о пути клиента"
+    )
+    predicted_churn_risk = models.FloatField(
+        null=True,
+        help_text="Прогнозируемый риск оттока (%)"
+    )
+    item_metrics = models.JSONField(
+        default=dict,
+        help_text="Метрики товарной корзины"
+    )
 
-    def analyze_items(self):
-        items = OrderItem.objects.filter(order=self.order)
-        
-        # Топ товаров
-        top_items = items.values('product__name').annotate(
-            total_units=Sum('quantity')
-        ).order_by('-total_units')[:5]
-        
-        # Индекс разнообразия
-        unique_products = items.values('product').distinct().count()
-        self.item_metrics = {
-            'top_items': list(top_items),
-            'basket_diversity': unique_products / items.count() if items.count() > 0 else 0
-        }
-        self.save()
+    objects = OrderAnalyticsManager()
 
     class Meta:
         indexes = [
             models.Index(fields=['margin']),
+            models.Index(fields=['acquisition_source']),
+            models.Index(fields=['predicted_churn_risk'])
         ]
-
-    def calculate_margin(self):
-        return self.order.total_price - sum(
-            item.product.cost_price * item.quantity 
-            for item in self.order.items.all()
-        )
+        verbose_name = 'Анализ заказа'
+        verbose_name_plural = 'Аналитика заказов'
 
     def __str__(self):
-        return f"Анализ заказа #{self.order.id}"
+        return f"Анализ #{self.order.id}"
+
+    @property
+    def margin_percentage(self):
+        """Маржинальность в процентах"""
+        if self.order.payment.amount > 0:
+            return (self.margin / self.order.payment.amount) * 100
+        return 0.0
 
 class InventoryTurnover(models.Model):
-    """Оборачиваемость запасов"""
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     category = models.ForeignKey(Category, on_delete=models.CASCADE)
     period_start = models.DateField()
     period_end = models.DateField()
-    
     stock_turnover = models.FloatField()
     stockout_days = models.PositiveIntegerField()
     demand_forecast = models.PositiveIntegerField()
+
+    objects = InventoryTurnoverManager()
 
     class Meta:
         unique_together = ('product', 'period_start')
         indexes = [
             models.Index(fields=['category', 'period_start']),
         ]
+        verbose_name = 'Анализ оборачиваемости'
+        verbose_name_plural = 'Аналитика оборачиваемости'
 
     def __str__(self):
         return f"Оборачиваемость {self.product}"
+
 
 class CustomerBehavior(models.Model):
     """Поведенческая аналитика клиентов"""
@@ -372,6 +380,16 @@ class CustomerBehavior(models.Model):
     }""")
     preference_profile = models.JSONField(default=dict)
     last_activity = models.DateTimeField(auto_now=True)
+
+    class CustomerBehaviorManager(models.Manager):
+        def create(self, **kwargs):
+            # Создаем объект через стандартный менеджер
+            instance = super().create(**kwargs)
+            # Обновляем engagement_score (вызовет сохранение)
+            instance.update_engagement_score()
+            return instance
+
+    objects = CustomerBehaviorManager()
 
     class Meta:
         indexes = [
@@ -389,18 +407,125 @@ class CustomerBehavior(models.Model):
 
     def __str__(self):
         return f"Поведение {self.user}"
+    
+    @staticmethod
+    def add_view(self): 
+        self.session_metrics['page_views'] = self.session_metrics['page_views'] + 1
+
+    @staticmethod
+    def cart_action(self): 
+        self.session_metrics['cart_actions'] = self.session_metrics['cart_actions'] + 1
+
 
 class OrderItemAnalytics(models.Model):
-    """Глубокая аналитика по позициям заказов"""
-    order_item = models.OneToOneField(OrderItem, on_delete=models.CASCADE)
-    margin = models.DecimalField(max_digits=10, decimal_places=2)
-    profitability_index = models.FloatField()  # Индекс рентабельности
-    cross_sell_products = models.ManyToManyField(Product)  # Сопутствующие товары
-    
+    """Расширенная аналитика по позициям заказов"""
+    order_item = models.OneToOneField(
+        OrderItem, 
+        on_delete=models.CASCADE,
+        related_name='analytics'
+    )
+    margin = models.DecimalField(
+        max_digits=10, 
+        decimal_places=2,
+        verbose_name="Маржа"
+    )
+    profitability_index = models.FloatField(
+        verbose_name="Индекс рентабельности (%)"
+    )
+    cross_sell_products = models.ManyToManyField(
+        Product,
+        verbose_name="Сопутствующие товары"
+    )
+    delivery_time = models.PositiveSmallIntegerField(
+        verbose_name="Срок доставки (дни)",
+        default=0
+    )
+    popularity_score = models.FloatField(
+        verbose_name="Индекс популярности",
+        default=0.0
+    )
+    return_rate = models.FloatField(
+        verbose_name="Процент возвратов",
+        default=0.0
+    )
+    last_updated = models.DateTimeField(
+        auto_now=True,
+        verbose_name="Последнее обновление"
+    )
+
+    objects = OrderItemAnalyticsManager()
+
     class Meta:
         indexes = [
             models.Index(fields=['margin']),
+            models.Index(fields=['delivery_time']),
+            models.Index(fields=['popularity_score']),
         ]
+        verbose_name = "Аналитика позиции заказа"
+        verbose_name_plural = "Аналитика позиций заказов"
 
-    def calculate_margin(self):
-        return self.order_item.price_at_purchase - self.order_item.product.cost_price
+    def update_popularity(self):
+        """Обновляет индекс популярности на основе продаж"""
+        total_sold = self.order_item.product.order_items.count()
+        recent_sold = self.order_item.product.order_items.filter(
+            order__order_date__gte=timezone.now() - timezone.timedelta(days=30)
+        ).count()
+        
+        self.popularity_score = (recent_sold * 0.7) + (total_sold * 0.3)
+        self.save(update_fields=['popularity_score'])
+
+    def update_return_rate(self):
+        """Рассчитывает процент возвратов для товара"""
+        total_sold = self.order_item.product.order_items.count()
+        returned = self.order_item.product.returns.count()
+        
+        self.return_rate = (returned / total_sold * 100) if total_sold > 0 else 0
+        self.save(update_fields=['return_rate'])
+
+    def __str__(self):
+        return f"Аналитика для {self.order_item}"
+class StockHistory(models.Model):
+    class ChangeType(models.TextChoices):
+        SALE = 'sale', 'Продажа'
+        RESTOCK = 'restock', 'Пополнение'
+        ADJUSTMENT = 'adjustment', 'Корректировка'
+
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
+    previous_stock = models.PositiveIntegerField()
+    new_stock = models.PositiveIntegerField()
+    change_type = models.CharField(max_length=20, choices=ChangeType.choices)
+    quantity = models.PositiveIntegerField()
+
+    objects = models.Manager()  # Базовый менеджер
+
+    class Meta:
+        verbose_name = 'История запасов'
+        verbose_name_plural = 'Истории запасов'
+
+    class StockHistoryManager(models.Manager):
+        def add_entry(self, product, quantity, change_type):
+            previous_stock = product.stock
+            
+            if change_type == self.model.ChangeType.SALE:
+                new_stock = previous_stock - quantity
+            elif change_type == self.model.ChangeType.RESTOCK:
+                new_stock = previous_stock + quantity
+            else:
+                new_stock = previous_stock  # Для корректировок нужно отдельное управление
+
+            product.stock = new_stock
+            product.save()
+
+            return self.create(
+                product=product,
+                previous_stock=previous_stock,
+                new_stock=new_stock,
+                change_type=change_type,
+                quantity=quantity
+            )
+
+    history = StockHistoryManager()
+
+    def __str__(self):
+        return f"{self.product} {self.change_type} {self.date}"

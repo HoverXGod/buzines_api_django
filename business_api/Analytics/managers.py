@@ -79,7 +79,6 @@ class CustomerLifetimeValueManager(models.Manager):
         clv.save()
         return clv
 
-
 class SalesFunnelManager(models.Manager):
     """Кастомный менеджер для работы с воронкой продаж"""
     
@@ -423,3 +422,266 @@ class PaymentAnalysisManager(models.Manager):
             base_prob += 10
         
         return min(base_prob, 100)
+    
+class OrderAnalyticsManager(models.Manager):
+    def add_entry(self, order):
+        """Создает или обновляет аналитическую запись для заказа"""
+        # Вычисляем основные показатели
+        margin = self._calculate_margin(order)
+        acquisition_source = self._determine_acquisition_source(order)
+        customer_journey = self._analyze_customer_journey(order)
+        churn_risk = self._predict_churn_risk(order)
+        
+        # Создаем или обновляем запись
+        analytics, created = self.get_or_create(
+            order=order,
+            defaults={
+                'margin': margin,
+                'acquisition_source': acquisition_source,
+                'customer_journey': customer_journey,
+                'predicted_churn_risk': churn_risk
+            }
+        )
+        
+        # Если запись существовала - обновляем данные
+        if not created:
+            analytics.margin = margin
+            analytics.acquisition_source = acquisition_source
+            analytics.customer_journey = customer_journey
+            analytics.predicted_churn_risk = churn_risk
+            analytics.save()
+        
+        # Анализируем товарные метрики
+        self._analyze_items(analytics)
+        
+        return analytics
+
+    def _calculate_margin(self, order):
+        """Расчет маржинальности заказа"""
+        total_cost = sum(
+            item.quanity * item.product.cost_price
+            for item in order.items.all()
+        )
+        return abs(float(order.payment.amount) - total_cost)
+
+    def _determine_acquisition_source(self, order):
+        """Определение источника привлечения"""
+        user = order.user
+        if user:
+            return user.acquisition_source or 'unknown'
+        return 'direct'
+
+    def _analyze_customer_journey(self, order):
+        """Анализ пути клиента"""
+        journey = {}
+        user = order.user
+        
+        if user:
+            # Время от регистрации до первого заказа
+            first_order = user.orders.order_by('date').first()
+            if first_order and first_order == order:
+                journey['days_to_first_order'] = (
+                    order.date - user.date_joined
+                ).days
+            
+            # Активность перед заказом
+            journey['pre_order_visits'] = user.visits.filter(
+                timestamp__range=(
+                    order.date - timedelta(days=7),
+                    order.date
+            )).count()
+            
+            # История заказов
+            journey['total_orders'] = user.orders.count()
+        
+        return journey
+
+    def _predict_churn_risk(self, order):
+        """Прогноз риска оттока"""
+        if not order.user:
+            return 0.0
+            
+        last_order_days = (timezone.now() - order.user.orders.latest(
+            'date').date).days
+        order_count = order.user.orders.count()
+        
+        # Простая эвристическая модель
+        risk = min(
+            (last_order_days * 0.5) + (50 / order_count if order_count > 0 else 0), 100
+        )
+        return round(risk, 2)
+
+    def _analyze_items(self, analytics):
+        """Анализ товарных метрик"""
+        items = analytics.order.items.all()
+        
+        # Топ товаров
+        top_items = items.values(
+            'product__id', 'product__name').annotate(
+                total_units=Sum('quanity')).order_by('-total_units')[:5]
+        
+        # Индекс разнообразия
+        unique_products = items.values('product').distinct().count()
+        diversity = unique_products / items.count() if items.count() > 0 else 0
+        
+        analytics.item_metrics = {
+            'top_items': list(top_items),
+            'basket_diversity': round(diversity, 2)
+        }
+        analytics.save()
+
+class InventoryTurnoverManager(models.Manager):
+    def add_entry(self, product):
+        today = timezone.now().date()
+        period_start = today.replace(day=1)
+        
+        # Рассчитываем конец периода
+        if period_start.month == 12:
+            next_month = period_start.replace(year=period_start.year+1, month=1)
+        else:
+            next_month = period_start.replace(month=period_start.month+1)
+        period_end = next_month - timedelta(days=1)
+
+        # Проверка существующей записи
+        if self.filter(product=product, period_start=period_start).exists():
+            return
+
+        # Получаем общее количество продаж за период
+        total_sold = (
+            product.orders.filter(
+                order__created_date__gte=period_start,
+                order__created_date__lte=period_end
+            ).aggregate(total=Sum('quanity'))['total'] or 0
+        )
+
+        # Рассчитываем дни отсутствия товара
+        stockout_days = self.calculate_stockout_days(product, period_start, period_end)
+
+        # Расчет оборачиваемости
+        avg_stock = self.calculate_avg_stock(product, period_start, period_end)
+        stock_turnover = total_sold / avg_stock if avg_stock > 0 else 0
+
+        self.create(
+            product=product,
+            category=product.category,
+            period_start=period_start,
+            period_end=period_end,
+            stock_turnover=round(stock_turnover, 2),
+            stockout_days=stockout_days,
+            demand_forecast=total_sold
+        )
+
+    def calculate_avg_stock(self, product, start, end):
+        from .models import StockHistory
+        # Получаем историю изменений запасов за период
+        history = StockHistory.history.filter(
+            product=product,
+            date__gte=start,
+            date__lte=end
+        ).order_by('date')
+
+        if not history.exists():
+            return product.stock
+
+        # Расчет среднего запаса по формуле среднего взвешенного
+        total_days = (end - start).days + 1
+        stock_days = []
+        prev_stock = history.first().previous_stock
+        prev_date = start
+
+        for entry in history:
+            days = (entry.date - prev_date).days
+            stock_days.append(prev_stock * days)
+            prev_date = entry.date
+            prev_stock = entry.new_stock
+
+        # Добавляем остаток дней после последней записи
+        days_left = (end - prev_date).days + 1
+        stock_days.append(prev_stock * days_left)
+
+        return sum(stock_days) / total_days
+
+    def calculate_stockout_days(self, product, start, end):
+        from .models import StockHistory
+        # Получаем все изменения запасов за период
+        history = StockHistory.history.filter(
+            product=product,
+            date__gte=start,
+            date__lte=end
+        ).order_by('date')
+
+        if not history.exists():
+            return 0 if product.stock > 0 else (end - start).days + 1
+
+        stockout_days = 0
+        current_stock = history.first().previous_stock
+        current_date = start
+
+        for entry in history:
+            if current_stock == 0:
+                stockout_days += (entry.date - current_date).days
+            
+            current_date = entry.date
+            current_stock = entry.new_stock
+
+        # Проверяем последний период
+        if current_stock == 0:
+            stockout_days += (end - current_date).days + 1
+
+        return stockout_days
+
+class OrderItemAnalyticsManager(models.Manager):
+    def create_analytics(self, order_item, **extra_fields):
+        """
+        Создает аналитическую запись с автоматическим расчетом показателей
+        """
+        # Базовые расчеты
+        cost_price = order_item.product.cost_price
+        price = order_item.price_at_purchase
+        margin = price - cost_price
+        
+        # Расчет комплексных показателей
+        profitability_index = (margin / cost_price * 100) if cost_price > 0 else 0
+        
+        # Расчет времени доставки (пример реализации)
+        delivery_time = self._calculate_delivery_time(order_item)
+        
+        # Определение сопутствующих товаров
+        cross_sell_products = self._find_cross_sell_products(order_item)
+        
+        # Создание объекта
+        return self.create(
+            order_item=order_item,
+            margin=margin,
+            profitability_index=profitability_index,
+            delivery_time=delivery_time,
+            **extra_fields
+        ).cross_sell_products.add(*cross_sell_products)
+    
+    def _calculate_delivery_time(self, order_item):
+        """Рассчитывает время доставки в днях"""
+        if hasattr(order_item.order, 'delivery_date'):
+            delta = order_item.order.delivery_date - order_item.order.order_date
+            return delta.days
+        return 0
+    
+    def _find_cross_sell_products(self, order_item):
+        """Находит часто покупаемые вместе товары"""
+        from .models import OrderItem
+        
+        # Получаем все заказы, где был этот товар
+        order_ids = OrderItem.objects.filter(
+            product=order_item.product
+        ).values_list('order_id', flat=True)
+        
+        # Находим товары из тех же заказов
+        cross_sell = OrderItem.objects.filter(
+            order_id__in=order_ids
+        ).exclude(
+            product=order_item.product
+        ).values('product').annotate(
+            total=Count('product')
+        ).order_by('-total')[:3]
+        
+        return [item['product'] for item in cross_sell]
+

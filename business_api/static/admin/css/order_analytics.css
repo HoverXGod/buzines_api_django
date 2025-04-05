@@ -1,0 +1,23 @@
+.margin-positive { color: #4CAF50 !important; }
+.margin-negative { color: #F44336 !important; }
+
+.churn-risk-indicator {
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    display: inline-block;
+}
+
+.basket-diversity-chart {
+    width: 200px;
+    height: 20px;
+    background: #eee;
+    border-radius: 10px;
+    margin: 5px 0;
+}
+
+@media (max-width: 768px) {
+    .customer-journey-columns {
+        column-count: 1 !important;
+    }
+}
