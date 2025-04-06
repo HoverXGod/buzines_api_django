@@ -240,6 +240,33 @@ class CustomerLifetimeValueAdmin(admin.ModelAdmin):
             if obj:
                 CustomerLifetimeValue.objects.update_clv(obj.user)
         return super().changeform_view(request, object_id, form_url, extra_context)
+    
+    def get_chart_config(self, request):
+        
+        return {
+            'charts': [
+                {
+                    'title': 'Прибавка клиентов за последние 30 дней',
+                    'type': 'line',  # line, bar, pie и др.
+                    'data_source': 'get_charts',  # Имя метода, возвращающего данные
+                    'x_axis': 'date_joined',
+                    'y_axis': 'total',
+                }
+            ]
+        }
+    
+    def get_charts(self):
+        return_data = CustomerBehavior.objects.filter(
+            user__date_joined=timezone.now() - timedelta(days=30)
+        ).values('user__date_joined').annotate(
+            total=Count('date_joined')
+        ).order_by(
+            'date_joined'
+        )
+        print(return_data)
+
+        print(1)
+        return return_data
 
 @admin.register(ProductPerformance)
 class ProductPerformanceAdmin(admin.ModelAdmin):
@@ -904,7 +931,6 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
     
     list_filter = [
         'delivery_time',
-        ('profitability_index', admin.RangeFilter),
         'cross_sell_products'
     ]
     
@@ -933,7 +959,6 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
     )
     
     filter_horizontal = ['cross_sell_products']
-    autocomplete_fields = ['order_item']
     readonly_fields = ['last_updated']
     actions = ['update_metrics']
     list_per_page = 30
@@ -950,7 +975,7 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
     @admin.display(description='Товар в заказе')
     def order_item_info(self, obj):
         product = obj.order_item.product
-        return format_html(
+        return format_html((
             '<div class="product-card">'
             '<i class="fas fa-box-open"></i>'
             '<div>'
@@ -961,6 +986,7 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
             product.name,
             obj.order_item.order.id,
             obj.order_item.quantity
+            )
         )
 
     @admin.display(description='Маржа', ordering='margin')

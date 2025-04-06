@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'Analytics',
     'django_user_agents',
     'django_json_widget',
+    # 'admincharts', TODO 
 ]
 
 MIDDLEWARE = [

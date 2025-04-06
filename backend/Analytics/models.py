@@ -369,7 +369,6 @@ class InventoryTurnover(models.Model):
     def __str__(self):
         return f"Оборачиваемость {self.product}"
 
-
 class CustomerBehavior(models.Model):
     """Поведенческая аналитика клиентов"""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -415,7 +414,6 @@ class CustomerBehavior(models.Model):
     @staticmethod
     def cart_action(self): 
         self.session_metrics['cart_actions'] = self.session_metrics['cart_actions'] + 1
-
 
 class OrderItemAnalytics(models.Model):
     """Расширенная аналитика по позициям заказов"""
@@ -484,6 +482,7 @@ class OrderItemAnalytics(models.Model):
 
     def __str__(self):
         return f"Аналитика для {self.order_item}"
+    
 class StockHistory(models.Model):
     class ChangeType(models.TextChoices):
         SALE = 'sale', 'Продажа'
