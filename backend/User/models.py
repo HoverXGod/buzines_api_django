@@ -135,8 +135,8 @@ class User(AbstractUser):
 
         if password != None:
             if old_pasword != None:
-                if Encryption.decrypt_data(password) == old_pasword:
-                    self.base_password = Encryption.encrypt_data(old_pasword)
+                if Encryption.decrypt_data(old_pasword) == Encryption.decrypt_data(self.base_password):
+                    self.base_password = Encryption.encrypt_data(password)
                 else: return False
             else: return False
 
@@ -148,7 +148,7 @@ class User(AbstractUser):
 
         if phone_number != None:
             try: 
-                User.phone_number.get(phone_number=phone_number)
+                User.objects.get(phone_number=phone_number)
                 return False
             except: self.phone_number = phone_number
 
@@ -157,7 +157,7 @@ class User(AbstractUser):
         return True
 
     @staticmethod
-    def register_user(login, password, first_name='User'): 
+    def register_user(login, password, first_name): 
         """Метод для регистрации пользователя, возвращает User или None в зависимости от результата,
         принимает в себя логин, пароль и почту, не имеет никаких проверок"""
 

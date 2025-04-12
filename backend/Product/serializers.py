@@ -80,3 +80,22 @@ class GroupPromotionSerializer(serializers.ModelSerializer):
         model = GroupPromotion
         depth = 1
         fields = ['id', 'user_group', 'discount', 'product', 'description', 'name', 'on_start', 'start_date', 'end_date', 'used_count', 'max_usage']
+
+class SubscriptionSerializer(serializers.ModelSerializer):
+
+    product = ProductSerializer
+
+    class Meta:
+        model = Subscription
+        depth = 1
+        fields = ['id', 'product', 'is_active', 'duration_days', 'discription']
+
+class UserSubscriptionSerializer(serializers.ModelSerializer):
+
+    subscription = SubscriptionSerializer
+    user = UserSerializer
+
+    class Meta:
+        model = UserSerializer
+        depth = 2
+        fields = ['id', 'user', 'subscription', 'started_at']

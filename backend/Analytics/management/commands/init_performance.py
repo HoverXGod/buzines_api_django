@@ -23,9 +23,5 @@ class Command(BaseCommand):
                 except ObjectDoesNotExist:
                     ProductPerformance.objects.add_entry(product)
                     logger.info(f"Created performance record for {product.name}")
-            
-            self.stdout.write(
-                self.style.SUCCESS('Successfully initialized performance records')
-            )
         except OperationalError:
             logger.error("Database not ready, skipping initialization")

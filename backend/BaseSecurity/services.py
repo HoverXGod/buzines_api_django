@@ -8,8 +8,8 @@ class SecureResponse(Response):
     def __init__(self, request, data=None, status=200, headers=None, content_type=None):
 
         if status != 201 and status != 200:
-            if data == None or data == '' or data == ' ':
-                data = 'ÍnteralApiError'
+            if data == None or data == '' or data == ' ' or status == 500:
+                data = 'InteralApiError'
             elif status == 400:
                 data = {"BadRequest": data}
             elif status == 403:

@@ -381,10 +381,12 @@ class GetPersonalDiscount(APIView):
                 request=request, 
                 data={
                     "Personal": self.serializer_classes[0](
-                        instance=PersonalDiscount.get_user_personal_discount(request.user)
+                        instance=PersonalDiscount.get_user_personal_discount(request.user),
+                        many=True
                         ).data,
                     "Group": self.serializer_classes[1](
-                        instance=GroupPromotion.get_user_personal_discount(request.user)
+                        instance=GroupPromotion.get_user_personal_discount(request.user),
+                        many=True
                         ).data},
                 status=200
                 )
@@ -402,7 +404,8 @@ class GetUserCart(APIView):
             return SecureResponse(
                 request=request, 
                 data=self.serializer_class(
-                    instance=Cart.get_user_cart(request.user)
+                    instance=request.user.cart.all(),
+                    many=True
                     ).data,
                 status=200
                 )

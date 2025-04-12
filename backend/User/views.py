@@ -7,11 +7,11 @@ from Api_Keys.models import Api_key
 from .models import User, UserGroup
 from Analytics.models import CustomerLifetimeValue, CustomerBehavior
 from django.core.management import call_command
+from Product.serializers import UserSubscriptionSerializer
 
 from drf_spectacular.settings import spectacular_settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 
-from BaseSecurity.utils import JWT_auth
 
 class RegisterUser(APIView):
     
@@ -55,14 +55,14 @@ class RegisterUser(APIView):
         username = request.GET["login"]
         email = request.GET["email"]
         try: name = request.GET["name"]
-        except: pass
+        except: name = "User"
 
         try: answer = User.register_user(login=username, password=password, first_name=name)
         except: return SecureResponse(request=request, data='', status=400)
 
-        jwt_token = User.login_user_by_password(request, email=email, password=password)
-
         if answer == None: return SecureResponse(request=request, status=400)
+
+        jwt_token = User.login_user_by_password(request, login=username, password=password)
 
         CustomerLifetimeValue.objects.create_clv(user = answer)
         CustomerBehavior.objects.create(user = answer)
@@ -91,12 +91,6 @@ class loginUser(APIView):
         jwt_token = User.login_user_by_password(request, login=login, password=password)
 
         call_command('init_cohort')
-
-        from Analytics.models import OrderAnalytics
-        from Order.models import Order
-
-        for item in Order.objects.all():
-            OrderAnalytics.objects.add_entry(item)
 
         if jwt_token == None: return SecureResponse(request=request, status=400)
         else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token}, status=200)
@@ -262,7 +256,7 @@ class MyGroups(APIView):
 class UserGroups(APIView):
 
     serializer_class = UserGroupSerializer
-    permission_classes = [isAutorized]
+    permission_classes = [isSuperUser]
 
     def get(self, request):
         user_id = request.GET['user_id']
@@ -271,11 +265,28 @@ class UserGroups(APIView):
         try: user = User.objects.get(id=user_id)
         except: return SecureResponse(request=request, status=400)
 
+        try:
+            return SecureResponse(
+                request=request,
+                data=self.serializer_class(
+                    instance=UserGroup.get_user_groups__list(user), 
+                    many=True).data, 
+                status=200
+                )
+        except: return SecureResponse(request=request, status=400)
+    
+class MySubsctiptions(APIView):
 
-        return SecureResponse(
-            request=request,
-            data=self.serializer_class(
-                instance=UserGroup.get_user_groups__list(user), 
-                many=True).data, 
-            status=200
-            )
+    serializer_class = [UserSubscriptionSerializer]
+    permission_classes = [isAutorized]
+
+    def get(self, request):
+        try: 
+            return SecureResponse(
+                request=request,
+                data=self.serializer_class[0](
+                    instance=request.user.subscriptions.all(),
+                    many=True).data,
+                status=200
+                )
+        except: return SecureResponse(request=request, status=400)

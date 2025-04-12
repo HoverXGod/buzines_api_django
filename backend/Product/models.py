@@ -65,6 +65,11 @@ class Category(models.Model):
 class Product(models.Model):
     """Модель товара относящегося к категории"""
 
+    PRODUCT_TYPE = [
+        ('Product', 'Товар'),
+        ('Subscription', 'Подписка')
+    ]
+
     name = models.CharField(max_length=64)
     description = models.TextField()
     price = models.FloatField()
@@ -76,6 +81,7 @@ class Product(models.Model):
     weight_start = models.FloatField()
     weight_end = models.FloatField()
     cost_price = models.FloatField(blank=True, default=1.0)
+    type = models.CharField(max_length=64, choices=PRODUCT_TYPE, default='Product')
 
     sku = models.CharField(max_length=32, unique=True, null=True)
     stock = models.PositiveIntegerField(default=0)
@@ -96,7 +102,7 @@ class Product(models.Model):
         self.save()
     
     @staticmethod
-    def create_product(name, description, price, category, weight=0, weight_start=0, weight_end=0):
+    def create_product(name, description, price, category, weight=0, weight_start=0, weight_end=0, type='Product'):
         """Создание продукта и прикрепление его к категории"""
         
         if weight != 0:
@@ -112,9 +118,12 @@ class Product(models.Model):
                 by_weight=by_weight,
                 weight=weight,
                 weight_start=weight_start,
-                weight_end=weight_end
+                weight_end=weight_end,
+                type=type
             ) 
             pr.save()
+            if type == 'Subscription':
+                pass
         except: return None
         return pr
         
@@ -552,3 +561,22 @@ class GroupPromotion(models.Model):
                 user
                 )
             )
+
+class Subscription(models.Model):
+    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    is_active = models.BooleanField(default=False)
+    duration_days = models.SmallIntegerField()
+    discription = models.TextField(max_length=512, default='')
+
+    class Meta:
+        verbose_name = 'Подписка'
+        verbose_name_plural = 'Подписки'
+
+class UserSubcription(models.Model):
+    subscription = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
+    started_at = models.DateField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Подписка пользователя'
+        verbose_name_plural = 'Подписки пользователей'

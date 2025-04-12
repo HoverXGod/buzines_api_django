@@ -549,8 +549,8 @@ class InventoryTurnoverManager(models.Manager):
         # Получаем общее количество продаж за период
         total_sold = (
             product.orders.filter(
-                order__created_date__gte=period_start,
-                order__created_date__lte=period_end
+                order__date__gte=period_start,
+                order__date__lte=period_end
             ).aggregate(total=Sum('quanity'))['total'] or 0
         )
 
@@ -570,8 +570,9 @@ class InventoryTurnoverManager(models.Manager):
             stockout_days=stockout_days,
             demand_forecast=total_sold
         )
-
-    def calculate_avg_stock(self, product, start, end):
+    
+    @staticmethod
+    def calculate_avg_stock(product, start, end):
         from .models import StockHistory
         # Получаем историю изменений запасов за период
         history = StockHistory.history.filter(
@@ -601,7 +602,8 @@ class InventoryTurnoverManager(models.Manager):
 
         return sum(stock_days) / total_days
 
-    def calculate_stockout_days(self, product, start, end):
+    @staticmethod
+    def calculate_stockout_days(product, start, end):
         from .models import StockHistory
         # Получаем все изменения запасов за период
         history = StockHistory.history.filter(
@@ -637,7 +639,7 @@ class OrderItemAnalyticsManager(models.Manager):
         """
         # Базовые расчеты
         cost_price = order_item.product.cost_price
-        price = order_item.price_at_purchase
+        price = order_item.product.price
         margin = price - cost_price
         
         # Расчет комплексных показателей

@@ -9,11 +9,11 @@ class Encryption:
 
     fernet = Fernet(base64.b64encode(SECRET_KEY.encode()[:32]))
 
-    part_1_sign = hashlib.sha256(datetime.now().date().__str__().encode('UTF-8')).hexdigest()
+    part_1_sign = hashlib.sha256(datetime.now().strftime("%m-%d").__str__().encode('UTF-8')).hexdigest()
     part_2_sign = hashlib.sha256(SECRET_KEY.encode('UTF-8')).hexdigest()
     part_3_sign = hashlib.sha256(str(part_2_sign+part_1_sign).encode('UTF-8')).hexdigest()
 
-    sign = hashlib.sha256(str(part_1_sign+part_2_sign+part_3_sign).encode('UTF-8')).hexdigest().encode()
+    sign = hashlib.sha256((part_1_sign+part_2_sign+part_3_sign).encode('UTF-8')).hexdigest().encode()
 
     @staticmethod
     def encrypt_data(data) -> bytes: 

@@ -9,7 +9,7 @@ from .models import *
 import json, csv
 
 @admin.register(SalesFunnel)
-class SalesFunnelAdmin(admin.ModelAdmin):
+class SalesFunnelAdmin(admin.ModelAdmin): #TODO Сделать Экспорт данных
     list_display = (
         'user_info', 
         'product_link', 
@@ -829,7 +829,7 @@ class InventoryTurnoverAdmin(admin.ModelAdmin):
     # Действия
     def recalculate_turnover(self, request, queryset):
         for item in queryset:
-            item.product.calculate_turnover()
+            item.update_entry()
         self.message_user(request, f"Пересчет выполнен для {queryset.count()} записей")
     recalculate_turnover.short_description = "Пересчитать показатели"
 
@@ -975,36 +975,25 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
     @admin.display(description='Товар в заказе')
     def order_item_info(self, obj):
         product = obj.order_item.product
-        return format_html((
-            '<div class="product-card">'
-            '<i class="fas fa-box-open"></i>'
-            '<div>'
-            '<h4>{}</h4>'
-            '<small>Заказ #{} · {} шт</small>'
-            '</div>'
-            '</div>',
-            product.name,
-            obj.order_item.order.id,
-            obj.order_item.quantity
-            )
+        return format_html(
+            '<div class="product-card"> <i class="fas fa-box-open"></i><div><h4>{}</h4<small>Заказ #{} · {} шт</small></div></div>'.format(product.name,
+                                                                                                                                            obj.order_item.order.id,
+                                                                                                                                            obj.order_item.quanity)            
         )
 
     @admin.display(description='Маржа', ordering='margin')
     def margin_display(self, obj):
+        val = 'positive' if obj.margin > 0 else 'negative'
         return format_html(
-            '<div class="money-cell {}">{:.2f} ₽</div>',
-            'positive' if obj.margin > 0 else 'negative',
-            obj.margin
+            f'<div class="money-cell {val}">{obj.margin:.2f} ₽</div>',
         )
 
     @admin.display(description='Рентабельность', ordering='profitability_index')
     def profitability_index_display(self, obj):
         return format_html(
-            '<div class="progress-bar">'
-            '<div class="progress-fill" style="width: {}%">{:.1f}%</div>'
-            '</div>',
-            min(obj.profitability_index, 100),
-            obj.profitability_index
+            '<div class="progress-bar"><div class="progress-fill" style="width: {}%">{:.1f}%</div></div>'.format(min(obj.profitability_index, 100),
+            obj.profitability_index)
+            
         )
 
     @admin.display(description='Доставка', ordering='delivery_time')
@@ -1023,12 +1012,9 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
             color = 'red'
         
         return format_html(
-            '<div class="delivery-badge {}">'
-            '<i class="fas {}"></i>{}'
-            '</div>',
-            color,
+            '<div class="delivery-badge {}"><i class="fas {}"></i>{}</div>'.format(color,
             icon,
-            text
+            text)   
         )
 
     @admin.display(description='Популярность', ordering='popularity_score')
@@ -1036,17 +1022,15 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
         return format_html(
             '<div class="popularity-rating">'
             '<i class="fas fa-fire"></i>'
-            '<span>{:.1f}/10</span>'
+            f'<span>{obj.popularity_score:.1f}/10</span>'
             '</div>',
-            obj.popularity_score
+            
         )
 
     @admin.display(description='Возвраты')
     def return_rate_display(self, obj):
         return format_html(
-            '<div class="return-meter" data-value="{}">{:.1f}%</div>',
-            obj.return_rate,
-            obj.return_rate
+            f'<div class="return-meter" data-value="{obj.return_rate}">{obj.return_rate:.1f}%</div>',           
         )
 
     @admin.display(description='Сопутствующие')
@@ -1054,9 +1038,9 @@ class OrderItemAnalyticsAdmin(admin.ModelAdmin):
         count = obj.cross_sell_products.count()
         return format_html(
             '<div class="cross-sell-count">'
-            '<i class="fas fa-link"></i>{}'
+            f'<i class="fas fa-link"></i>{count}'
             '</div>',
-            count
+            
         )
 
     @admin.action(description='🔄 Обновить метрики')
@@ -1138,9 +1122,8 @@ class CustomerBehaviorAdmin(admin.ModelAdmin):
         score = obj.preference_profile.get('engagement_score', 0)
         color = 'green' if score > 50 else 'orange' if score > 20 else 'red'
         return format_html(
-            '<div style="background: {}; color: white; padding: 2px 5px; border-radius: 3px; text-align: center;">{:.1f}</div>',
-            color,
-            score
+            '<div style="background: {}; color: white; padding: 2px 5px; border-radius: 3px; text-align: center;">{:.1f}</div>'.format(color,
+            score)
         )
     
     @admin.display(description='📄 Просмотры')
@@ -1158,7 +1141,8 @@ class CustomerBehaviorAdmin(admin.ModelAdmin):
     # Кастомные действия
     @admin.action(description='🔄 Пересчитать вовлеченность')
     def update_engagement_scores(self, request, queryset):
-        CustomerBehavior.objects.update_engagement_scores(queryset=queryset)
+        for item in queryset:
+            item.update_engagement_score()
         self.message_user(request, f"Обновлено {queryset.count()} записей")
     
     # Улучшенные подсказки

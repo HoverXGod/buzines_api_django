@@ -11,8 +11,5 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         try:
             apps.get_model('Analytics', 'CohortAnalysis').objects.add_entry()
-            self.stdout.write(
-                self.style.SUCCESS('Successfully initialized cohort records')
-            )
         except OperationalError:
                 logger.error("Database not ready, skipping initialization")

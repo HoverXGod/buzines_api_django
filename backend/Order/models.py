@@ -39,7 +39,7 @@ class Order(models.Model):
     )
 
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
-    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True, related_name='payment')
+    payment = models.ForeignKey(Payment, on_delete=models.CASCADE, null=True, related_name='order')
     products = models.TextField(max_length=1024)
     chanell = models.ForeignKey(SalesChannel, on_delete=models.SET_NULL, null=True)
     date = models.DateTimeField(auto_now=True)
@@ -98,37 +98,13 @@ class Order(models.Model):
 
         order = Order.objects.last()
 
-        for item in product_dict:
-            order_item = OrderItem.objects.create(
-                order = order,
-                product = product_dict[item]['product'],
-                quanity = product_dict[item]['quanity'],
-                price = product_dict[item]['price'],
-                discount = product_dict[item]['discount'],
-                promotion_name = product_dict[item]['promotion'].name,
-                promotion_type = product_dict[item]['promotion'].__class__
-            )
-            process_order_item(order_item)
+        from events import order_create
 
-        from Analytics.models import SalesFunnel, CustomerLifetimeValue
-
-        try:
-            CustomerLifetimeValue.objects.create_clv(user = user)
-        except: pass
-
-        for item in order.items.all():
-
-            try:
-                SalesFunnel.objects.add_entry(
-                    user=request.user,
-                    product=item.product,
-                    stage='checkout',
-                    session_data={}
-                    )
-            except :pass
-            
-        from django.core.management import call_command
-        call_command('init_cohort')
+        order_create(
+            request=request,
+            order=order,
+            product_dict=product_dict
+        )
 
         Cart.delete_user_cart(user)
 
@@ -174,7 +150,7 @@ class OrderItem(models.Model):
     promotion_type = models.CharField(max_length=32)
 
     def __str__(self):
-        return f"{self.product.name} * {self.quanity}"
+        return f" {self.product.name} * {self.quanity}"
     
     @property
     def date(self):

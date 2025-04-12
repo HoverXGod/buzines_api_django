@@ -6,6 +6,7 @@ from Product.models import Product, Category
 from Order.models import Order, OrderItem
 from Payment.models import Payment
 from .managers import *
+from datetime import datetime
 
 class SalesFunnel(models.Model):
     """Воронка продаж с детализацией по этапам"""
@@ -124,8 +125,8 @@ class ProductPerformance(models.Model):
         'stock_level': 0
     }""")
     total_units_sold = models.PositiveIntegerField(default=0)
-    avg_selling_price = models.DecimalField(max_digits=10, decimal_places=2)
-    discount_impact = models.DecimalField(max_digits=5, decimal_places=2)
+    avg_selling_price = models.DecimalField(max_digits=20, decimal_places=2)
+    discount_impact = models.DecimalField(max_digits=20, decimal_places=2)
     
     objects = PerformanceManager()
     
@@ -163,7 +164,7 @@ class ProductPerformance(models.Model):
         self.metrics['purchases'] = count
         self.total_units_sold = items['total_units'] or 0
         self.avg_selling_price = items['avg_price'] or Decimal('0.00')
-        self.discount_impact = items['total_discount'] or Decimal('0.00')
+        self.discount_impact = Decimal(items['total_discount']) or Decimal('0.00')
         self.metrics['stock_level'] = self.product.stock
 
     def add_view(self):
@@ -368,11 +369,112 @@ class InventoryTurnover(models.Model):
 
     def __str__(self):
         return f"Оборачиваемость {self.product}"
+    
+    def update_entry(self): 
+        today = datetime.now().date()
+        period_start = today.replace(day=1)
+
+        product = self.product
+        
+        # Рассчитываем конец периода
+        if period_start.month == 12:
+            next_month = period_start.replace(year=period_start.year+1, month=1)
+        else:
+            next_month = period_start.replace(month=period_start.month+1)
+        period_end = next_month - timedelta(days=1)
+
+        # Получаем общее количество продаж за период
+        total_sold = (
+            product.orders.filter(
+                order__date__gte=period_start,
+                order__date__lte=period_end
+            ).aggregate(total=Sum('quanity'))['total'] or 0
+        )
+
+        # Рассчитываем дни отсутствия товара
+        stockout_days = self.calculate_stockout_days(product, period_start, period_end)
+
+        # Расчет оборачиваемости
+        avg_stock = self.calculate_avg_stock(product, period_start, period_end)
+        stock_turnover = total_sold / avg_stock if avg_stock > 0 else 0
+
+        period_end.__str__()
+
+        time1, time2 = period_start.__str__(), period_end.__str__()
+
+        self.period_start=time1
+        self.period_end=time2
+        self.stock_turnover=round(stock_turnover, 2)
+        self.stockout_days=stockout_days
+        self.demand_forecast=total_sold
+
+        self.save()
+
+    @staticmethod
+    def calculate_avg_stock(product, start, end):
+        # Получаем историю изменений запасов за период
+        history = StockHistory.history.filter(
+            product=product,
+            date__gte=start,
+            date__lte=end
+        ).order_by('date')
+
+        if not history.exists():
+            return product.stock
+
+        # Расчет среднего запаса по формуле среднего взвешенного
+        total_days = (end - start).days + 1
+        stock_days = []
+        prev_stock = history.first().previous_stock
+        prev_date = start
+
+        for entry in history:
+            days = (entry.date - prev_date).days
+            stock_days.append(prev_stock * days)
+            prev_date = entry.date
+            prev_stock = entry.new_stock
+
+        # Добавляем остаток дней после последней записи
+        days_left = (end - prev_date).days + 1
+        stock_days.append(prev_stock * days_left)
+
+        return sum(stock_days) / total_days
+
+    @staticmethod
+    def calculate_stockout_days(product, start, end):
+        # Получаем все изменения запасов за период
+        history = StockHistory.history.filter(
+            product=product,
+            date__gte=start,
+            date__lte=end
+        ).order_by('date')
+
+        if not history.exists():
+            return 0 if product.stock > 0 else (end - start).days + 1
+
+        stockout_days = 0
+        current_stock = history.first().previous_stock
+        current_date = start
+
+        for entry in history:
+            if current_stock == 0:
+                stockout_days += (entry.date - current_date).days
+            
+            current_date = entry.date
+            current_stock = entry.new_stock
+
+        # Проверяем последний период
+        if current_stock == 0:
+            stockout_days += (end - current_date).days + 1
+
+        return stockout_days
+
 
 class CustomerBehavior(models.Model):
     """Поведенческая аналитика клиентов"""
     user = models.ForeignKey(User, on_delete=models.CASCADE)
-    session_metrics = models.JSONField(default=dict, help_text="""{
+    session_metrics = models.JSONField(default=dict,
+        help_text="""{
         'page_views': 0,
         'time_spent': 0,
         'cart_actions': 0
@@ -381,9 +483,13 @@ class CustomerBehavior(models.Model):
     last_activity = models.DateTimeField(auto_now=True)
 
     class CustomerBehaviorManager(models.Manager):
-        def create(self, **kwargs):
+        def create(self, user):
             # Создаем объект через стандартный менеджер
-            instance = super().create(**kwargs)
+            instance = super().create(user=user, session_metrics={
+                'page_views': 0,
+                'time_spent': 0,
+                'cart_actions': 0
+                })
             # Обновляем engagement_score (вызовет сохранение)
             instance.update_engagement_score()
             return instance
@@ -407,11 +513,9 @@ class CustomerBehavior(models.Model):
     def __str__(self):
         return f"Поведение {self.user}"
     
-    @staticmethod
     def add_view(self): 
         self.session_metrics['page_views'] = self.session_metrics['page_views'] + 1
 
-    @staticmethod
     def cart_action(self): 
         self.session_metrics['cart_actions'] = self.session_metrics['cart_actions'] + 1
 
