@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
     'User',
     'Encryption',
     'Api_Keys',
@@ -48,12 +50,14 @@ INSTALLED_APPS = [
     'Product',
     'Payment',
     'Order',
+    'Analytics',
+
     'rest_framework',
     'drf_spectacular',
     'import_export',
-    'Analytics',
     'django_user_agents',
     'django_json_widget',
+    'cachalot',
     # 'admincharts', TODO 
 ]
 
@@ -95,6 +99,11 @@ SPECTACULAR_SETTINGS = {
 
 SESSION_COOKIE_AGE = 7*24*60*60 
 
+CELERY_BROKER_URL = 'amqp://{user}:{password}@rabbitmq:5672//'.format(
+    user=os.environ.get('RABBITMQ_USER', 'guest'),
+    password=os.environ.get('RABBITMQ_PASSWORD', 'guest')
+)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -121,10 +130,23 @@ WSGI_APPLICATION = 'business_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('POSTGRES_DB', 'main'),
+        'USER': os.environ.get('POSTGRES_USER', 'root'),
+        'PASSWORD': os.environ.get('POSTGRES_PASSWORD', 'root'),
+        'HOST': 'localhost',  # Имя сервиса в docker-compose.yml
+        'PORT': '5432',
     }
 }
+
+CASHES = {
+    'default': {
+        'BACKEND': 'django.redis.cache.RedisCache',
+        'LOCATION': 'redis://redis:6379/1'
+    }
+}
+
+
 if DEBUG:
     try:
         from .local_settings import *
@@ -170,12 +192,9 @@ USE_TZ = False
 
 STATIC_URL = 'static/'
 
-STATICFILES_DIRS = []
-
-if DEBUG:
-    STATICFILES_DIRS = [
-        BASE_DIR / "static/",
-    ]
+STATICFILES_DIRS = [
+    BASE_DIR / "static/",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

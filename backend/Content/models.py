@@ -129,3 +129,8 @@ class PageText(models.Model):
         text.delete()
 
         return text_bufer
+
+class PageColor(models.Model):
+    index = models.IntegerField()
+    page_name = models.CharField(max_length=64)
+

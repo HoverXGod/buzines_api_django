@@ -60,7 +60,7 @@ class RegisterUser(APIView):
         try: answer = User.register_user(login=username, password=password, first_name=name)
         except: return SecureResponse(request=request, data='', status=400)
 
-        if answer == None: return SecureResponse(request=request, status=400)
+        if not answer: return SecureResponse(request=request, status=400)
 
         jwt_token = User.login_user_by_password(request, login=username, password=password)
 

@@ -1,4 +1,4 @@
-#!/Users/nikita/Documents/GitHub/buzines_api_django/venv/bin/python3.11
+#!/Users/nikitakrasotkin/PycharmProjects/buzines_api_django/venv/bin/python
 # -*- coding: utf-8 -*-
 import re
 import sys

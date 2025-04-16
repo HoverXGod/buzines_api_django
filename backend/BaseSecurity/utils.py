@@ -40,7 +40,7 @@ class JWT_auth:
         """Компиляция JWT формы, это не зашифрованная версия токена без подписи"""
 
         name = User.username + ";"
-        password = User.base_password.decode() + ";"
+        password = bytes(User.base_password).decode() + ";"
         user_id = str(User.pk) + ";"
         date = datetime.now().__str__() + ";"
         

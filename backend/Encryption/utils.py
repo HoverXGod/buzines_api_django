@@ -19,12 +19,18 @@ class Encryption:
     def encrypt_data(data) -> bytes: 
         """Шифрование"""
 
-        if type(data) != bytes: data = data.encode()
+        try:
+            if type(data) != bytes: data = data.encode()
+        except:
+            if type(data) != bytes: data = bytes(data)
         return Encryption.fernet.encrypt(data)
 
     @staticmethod 
     def decrypt_data(data) -> str:
-        """Дешифрование""" 
+        """Дешифрование"""
 
-        if type(data) != bytes: data = data.encode()
+        try:
+            if type(data) != bytes: data = data.encode()
+        except:
+            if type(data) != bytes: data = bytes(data)
         return Encryption.fernet.decrypt(data).decode()
