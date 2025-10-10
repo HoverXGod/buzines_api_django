@@ -1,9 +1,9 @@
+from django.contrib.auth.models import AnonymousUser
+from django.utils.deprecation import MiddlewareMixin
+
 from BaseSecurity.services import SessionManager
 from .models import AuditLog
 from .utils import JWT_auth
-from django.utils.deprecation import MiddlewareMixin
-from django.contrib.auth.models import AnonymousUser
-from business_api.settings import DEBUG
 
 class AuditLogMiddleware(MiddlewareMixin):
     def __init__(self, get_response=None):
@@ -26,6 +26,7 @@ class AuthenticationMiddleware(MiddlewareMixin):
 
         sm = SessionManager(request)
         sm.auth__token(token)
+
         
         if JWT_auth.verify_jwt_token(token):
             user = JWT_auth.jwt_to_user(jwt_token=token)

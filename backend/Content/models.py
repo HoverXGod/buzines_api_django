@@ -2,6 +2,7 @@ from django.db import models
 from User.models import User
 from datetime import datetime
 from .services import ImagesManager
+from Product.models import Product
 
 class Post(models.Model):
     """Модель поста, имеющая базовые методы, ключ привязан к пользователю"""
@@ -18,7 +19,7 @@ class Post(models.Model):
         verbose_name_plural = 'Посты'  # Имя модели во множественном числе
 
     @staticmethod
-    def create_post(text='', author=None, images='', title=''):
+    def create_post(text='', author=None, images=None, title=''):
         """Создание поста"""
          
         date = datetime.now().date().__str__()
@@ -65,6 +66,7 @@ class PageText(models.Model):
     index = models.CharField(max_length=64)
     text = models.TextField()
     page_name = models.CharField(max_length=64)
+    template_id = models.IntegerField(null=True)
 
     class Meta: 
         verbose_name = 'Текст страницы'  # Имя модели в единственном числе
@@ -133,4 +135,39 @@ class PageText(models.Model):
 class PageColor(models.Model):
     index = models.IntegerField()
     page_name = models.CharField(max_length=64)
+    color = models.CharField(max_length=12)
+    class Meta:
+        verbose_name = 'Цвет на странице'  # Имя модели в единственном числе
+        verbose_name_plural = 'Цвета на страницах'  # Имя модели во множественном числе
 
+class Buttons(models.Model):
+    index = models.IntegerField()
+    template_id = models.IntegerField()
+    action = models.CharField(max_length=64)
+    class Meta:
+        verbose_name = 'Кнопка на странице'  # Имя модели в единственном числе
+        verbose_name_plural = 'Кнопки на страницах'  # Имя модели во множественном числе
+
+class ProductCard(models.Model):
+    template_id = models.IntegerField()
+    product_id = models.OneToOneField(Product, on_delete=models.CASCADE, related_name='card')
+
+    class Meta:
+        verbose_name = 'Карточка товара'  # Имя модели в единственном числе
+        verbose_name_plural = 'Карточки товаров'  # Имя модели во множественном числе
+
+class NavBarSettings(models.Model):
+    pages = models.JSONField()
+    template_id = models.IntegerField()
+    buttons = models.JSONField()
+
+    class Meta:
+        verbose_name = 'Настройки навигационной панели'  # Имя модели в единственном числе
+
+class FooterSettings(models.Model):
+    data = models.JSONField()
+    template_id = models.IntegerField()
+    buttons = models.JSONField()
+
+    class Meta:
+        verbose_name = 'Настройки футера'  # Имя модели в единственном числе

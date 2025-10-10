@@ -172,7 +172,7 @@ class ProductPerformance(models.Model):
         self.save()
 
     def add_cart(self):
-        self.metrics['cart_adds'] + self.metrics['cart_adds'] + 1
+        self.metrics['cart_adds'] = self.metrics['cart_adds'] + 1
         self.save()
 
     def update_conversion_rate(self):

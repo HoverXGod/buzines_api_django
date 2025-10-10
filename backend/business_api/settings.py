@@ -141,10 +141,26 @@ DATABASES = {
 
 CASHES = {
     'default': {
-        'BACKEND': 'django.redis.cache.RedisCache',
-        'LOCATION': 'redis://redis:6379/1'
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': 'redis://redis:6379/1',
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+            'SOCKET_CONNECT_TIMEOUT': 10,  # секунды
+            'SOCKET_TIMEOUT': 10,  # секунды
+            'CONNECTION_POOL_KWARGS': {
+                'max_connections': 60,
+                'retry_on_timeout': True,
+                'socket_keepalive': True
+            }
+        },
+        'KEY_PREFIX': 'backend',
     }
 }
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_CACHE_ALIAS = 'default'
+
+CACHE_MIDDLEWARE_SECONDS = 60 * 60 * 6 # 6 hours
 
 
 if DEBUG:

@@ -1,6 +1,7 @@
 from business_api.settings import SECRET_KEY
 from cryptography.fernet import Fernet
 from datetime import datetime
+from django.utils.functional import cached_property
 import base64
 import hashlib
 
@@ -16,6 +17,7 @@ class Encryption:
     sign = hashlib.sha256((part_1_sign+part_2_sign+part_3_sign).encode('UTF-8')).hexdigest().encode()
 
     @staticmethod
+    @cached_property
     def encrypt_data(data) -> bytes: 
         """Шифрование"""
 
@@ -25,7 +27,8 @@ class Encryption:
             if type(data) != bytes: data = bytes(data)
         return Encryption.fernet.encrypt(data)
 
-    @staticmethod 
+    @staticmethod
+    @cached_property
     def decrypt_data(data) -> str:
         """Дешифрование"""
 

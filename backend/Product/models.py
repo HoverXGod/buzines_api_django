@@ -1,6 +1,7 @@
 from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
+from django.utils.functional import cached_property
 
 class Category(models.Model):
     """Модель категори к которой относятся товары"""
@@ -141,9 +142,9 @@ class Product(models.Model):
         self.save()
         return self
 
-        
 
     @staticmethod
+    @cached_property
     def get_products(category_name): 
         """Вовзращает все активные продукты в категории по ее имени"""
 
@@ -156,13 +157,12 @@ class Product(models.Model):
     def delete_product(self): 
         """Удаление продукта, возвращает данные об удалённом продукте"""
 
-
         bufer = self
         self.delete()
         return bufer
     
     def add_view(self):
-        self.analysis.add_view()
+        self.analysis.add_view() #TODO: доделать надо
 
     def add_cart(self):
         self.analysis.add_cart()
@@ -181,6 +181,7 @@ class Cart(models.Model):
 
 
     @staticmethod
+    @cached_property
     def get_user_cart(user):
         """Возвращает полный перечень товаров пользователя"""
 
@@ -230,6 +231,7 @@ class Cart(models.Model):
     
 
     @staticmethod
+    @cached_property
     def calculate_base_cost(user):
 
         cart_items = Cart.objects.filter(user=user).select_related('product')
@@ -254,6 +256,7 @@ class Cart(models.Model):
         return original_total
     
     @staticmethod
+    @cached_property
     def calculate_total(user, promo_code=None):
         
         cart_items = Cart.objects.filter(user=user).select_related('product')
@@ -436,6 +439,7 @@ class Promotion(models.Model):
         return True
     
     @staticmethod
+    @cached_property
     def get_all_promotions():
         """Получение всех активных акций"""
 
@@ -493,6 +497,7 @@ class PersonalDiscount(models.Model):
         return True
     
     @staticmethod
+    @cached_property
     def get_user_personal_discount(user):
         """Получение всех индвидуальных предложенй пользователя"""
         
@@ -517,6 +522,7 @@ class Promocode(models.Model):
         ).save()
 
     @staticmethod
+    @cached_property
     def get_promo(code): 
         """Получение промокода по коду"""
 
@@ -554,6 +560,7 @@ class GroupPromotion(models.Model):
     def created(self): return self.start_date
 
     @staticmethod
+    @cached_property
     def get_user_personal_discount(user):
         """Возвращает акции пользовательской группы"""
         return GroupPromotion.objects.filter(
@@ -566,17 +573,28 @@ class Subscription(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE)
     is_active = models.BooleanField(default=False)
     duration_days = models.SmallIntegerField()
-    discription = models.TextField(max_length=512, default='')
+    description = models.TextField(max_length=512, default='')
 
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
 
-class UserSubcription(models.Model):
-    subscription = models.ForeignKey(Product, on_delete=models.SET_NULL, null=True)
+class UserSubscriptionItem(models.Model):
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     started_at = models.DateField(auto_now_add=True)
+    active = models.BooleanField(default=True)
 
     class Meta:
         verbose_name = 'Подписка пользователя'
         verbose_name_plural = 'Подписки пользователей'
+
+    def __call__(self): pass # При вызове класса как метода будет проверять все подписки на срок годности и обновлять переменную active
+
+    @cached_property
+    def create(self, User: type[User], Subscription: type[Subscription]) -> None:
+        pass # создает подписку
+
+    @property
+    @cached_property
+    def is_active(self) -> bool: pass # при вызове будет отображать активна ли подписка и проверять это

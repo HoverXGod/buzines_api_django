@@ -20,7 +20,10 @@ class SecureResponse(Response):
 
         request.log.request_status = status
 
-        return super().__init__(data=data, status=status, headers=headers, content_type=content_type)
+        super().__init__(data=data,
+                         status=status,
+                         headers=headers,
+                         content_type=content_type)
 
 class SessionManager: 
 

@@ -62,7 +62,7 @@ class RegisterUser(APIView):
 
         if not answer: return SecureResponse(request=request, status=400)
 
-        jwt_token = User.login_user_by_password(request, login=username, password=password)
+        jwt_token, _ = User.login_user_by_password(request, login=username, password=password)
 
         CustomerLifetimeValue.objects.create_clv(user = answer)
         CustomerBehavior.objects.create(user = answer)
@@ -88,11 +88,11 @@ class loginUser(APIView):
         password = request.GET["password"]
         login = request.GET["login"]
 
-        jwt_token = User.login_user_by_password(request, login=login, password=password)
+        jwt_token, request = User.login_user_by_password(request, login=login, password=password)
 
         call_command('init_cohort')
 
-        if jwt_token == None: return SecureResponse(request=request, status=400)
+        if not jwt_token: return SecureResponse(request=request, status=400)
         else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token}, status=200)
 
 class MyProfile(APIView):
@@ -121,7 +121,6 @@ class UserProfile(APIView):
 
     def get(self, request):
         user_id = request.GET['user_id']
-        user = None
         
         try: user = User.objects.get(id=user_id)
         except: return SecureResponse(request=request, status=400)
@@ -146,13 +145,6 @@ class EditProfileUser(APIView):
     def get(self, request):
         user = request.user
         user_id = request.user.id
-        
-        phone_number = None
-        password = None
-        username = None
-        email = None
-        address = None
-        old_password = None
 
         try: phone_number = request.GET['phone_number']
         except: phone_number = None

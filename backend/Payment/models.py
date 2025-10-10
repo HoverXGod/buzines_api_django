@@ -22,8 +22,6 @@ class Payment(models.Model):
     payment_id = models.CharField(max_length=128)
     discount = models.FloatField()
     needs_review = models.BooleanField(default=False)
-
-    # Новые поля для аналитики
     payment_gateway = models.CharField(max_length=30)  # Платежный шлюз
     fee = models.DecimalField(max_digits=10, decimal_places=2)  # Комиссия
     currency = models.CharField(max_length=3, default="RUB")  # Валюта платежа
@@ -34,7 +32,7 @@ class Payment(models.Model):
     def amount(self): return self.cost
 
     @property
-    def payment_gateway(self): return self.method
+    def payment_gateway(self) -> object: return self.method
 
     def __str__(self):
         return f"{self.payment_id} | статус {self.status}"

@@ -7,8 +7,10 @@ from Analytics.models import SalesFunnel
 from BaseSecurity.utils import get_client_ip
 from django.core.management import call_command
 from Analytics.models import CustomerBehavior
+from django.views.decorators.cache import cache_page
 
-class GetProductsCategory(APIView): 
+@cache_page(60 * 60 * 18)
+class GetProductsCategory(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
@@ -34,7 +36,8 @@ class GetProductsCategory(APIView):
         except: 
             return SecureResponse(request=request, status=400)
 
-class GetAllProducts(APIView): 
+@cache_page(60 * 60 * 18)
+class GetAllProducts(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
@@ -51,7 +54,9 @@ class GetAllProducts(APIView):
             status=200
             )
 
-class GetProduct(APIView): 
+
+@cache_page(60 * 60 * 18)
+class GetProduct(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
@@ -193,7 +198,8 @@ class AddImageCategory(APIView):
     def get(self, request):
         return SecureResponse(request=request)
 
-class GetAllCategorys(APIView): 
+@cache_page(60 * 60 * 18)
+class GetAllCategorys(APIView):
     
     permission_classes = []
     serializer_class = CategorySerializer
@@ -350,7 +356,8 @@ class AddProductInCart(APIView):
         except: 
             return SecureResponse(request=request, status=400)
         
-class GetAllPromotions(APIView): 
+@cache_page(60 * 60 * 18)
+class GetAllPromotions(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = PromotionSerializer
@@ -369,7 +376,8 @@ class GetAllPromotions(APIView):
         except: 
             return SecureResponse(request=request, status=400)
         
-class GetPersonalDiscount(APIView): 
+@cache_page(60 * 60 * 18)
+class GetPersonalDiscount(APIView):
     
     permission_classes = [isAutorized]
     serializer_classes = [PersonalDiscountSerializer, GroupPromotionSerializer]
@@ -393,7 +401,8 @@ class GetPersonalDiscount(APIView):
         except: 
             return SecureResponse(request=request, status=400)
 
-class GetUserCart(APIView): 
+@cache_page(60 * 60 * 18)
+class GetUserCart(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = UserCartSerializer
@@ -412,7 +421,9 @@ class GetUserCart(APIView):
         except: 
             return SecureResponse(request=request, status=400)
         
-class GetPromocode(APIView): 
+
+@cache_page(60 * 60 * 18)
+class GetPromocode(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = PromoCodeSerializer
@@ -534,7 +545,8 @@ class RemoveUserCart(APIView):
         except: 
             return SecureResponse(request=request, status=400)
         
-class GetCartCost(APIView): 
+@cache_page(60 * 60 * 18)
+class GetCartCost(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
@@ -552,7 +564,8 @@ class GetCartCost(APIView):
         except: 
             return SecureResponse(request=request, status=400)
         
-class GetCartDiscount(APIView): 
+@cache_page(60 * 60 * 18)
+class GetCartDiscount(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = CartSerializer

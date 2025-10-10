@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
 from datetime import datetime
+from django.utils.functional import cached_property
 
 class User(AbstractUser):   
     """Модель Пользователя, имеет базовые методы"""
@@ -38,9 +39,10 @@ class User(AbstractUser):
         return f"{self.username}: {self.first_name} {self.last_name}"
 
     def set_password(self, raw_password): 
-        self.password = Encryption.encrypt_data(data=raw_password)
+        self.password = raw_password
         self.save
 
+    @cached_property
     def get_user_api(self):
         """Получение последнего апи ключа пользователя"""
         from Api_Keys.models import Api_key
@@ -56,6 +58,7 @@ class User(AbstractUser):
         self.base_password = Encryption.encrypt_data(value)
         self.save()
 
+    @cached_property
     def __isStaff(self, value: bool) -> bool:
         isStaff = value
 
@@ -182,7 +185,7 @@ class User(AbstractUser):
         return user
 
     @staticmethod
-    def login_user_by_password(request, login, password) -> str: 
+    def login_user_by_password(request, login, password) -> tuple:
         """Метод для авторизации пользователя по паролю, возвращает объект JWT Токен или None в зависимости от результата,
         принимает в себя почту и пароль"""
 
@@ -202,8 +205,12 @@ class User(AbstractUser):
 
         user.last_login = datetime.now().__str__()
         user.save()
+        try:
+            request.COOKIES['JWTCloudeToken'] = jwt_token
+        finally:
+            request.token = jwt_token
 
-        return jwt_token
+        return jwt_token, request
     
 class UserGroup(models.Model): 
     name = models.CharField(max_length=32)
@@ -217,6 +224,7 @@ class UserGroup(models.Model):
         verbose_name_plural = 'Группы пользователей'  # Имя модели во множественном числе
 
     @property
+    @cached_property
     def permissions_list(self) -> list:
         return self.permissions.split(",")
 
@@ -225,6 +233,7 @@ class UserGroup(models.Model):
         return ",".join(value)
     
     @permissions_list.getter
+    @cached_property
     def permissions_list(self) -> list:
         return self.permissions.split(",")
     
@@ -243,6 +252,7 @@ class UserGroup(models.Model):
         return return_list
     
     @staticmethod
+    @cached_property
     def get_user_groups__list(user):
         """Возвращает список Групп групп пользователя"""
 
