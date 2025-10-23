@@ -210,6 +210,9 @@ class User(AbstractUser):
         finally:
             request.token = jwt_token
 
+        from Product.models import UserSubscriptionItem
+        UserSubscriptionItem.check_all_user_subscriptions(user)
+
         return jwt_token, request
     
 class UserGroup(models.Model): 
@@ -238,6 +241,7 @@ class UserGroup(models.Model):
         return self.permissions.split(",")
     
     @staticmethod
+    @cached_property
     def get_user_groups__id(user):
         """Возвращает список Айдишников групп пользователя"""
 

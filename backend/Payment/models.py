@@ -73,6 +73,9 @@ class Payment(models.Model):
             self.pay_time = timezone.now()
             self.save()
 
+            from Product.models import UserSubscriptionItem
+            UserSubscriptionItem.check_all_user_subscriptions(self.user)
+
         from Analytics.models import PaymentAnalysis
         PaymentAnalysis.objects.add_entry(self)
         

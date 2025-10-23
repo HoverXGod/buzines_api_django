@@ -1,8 +1,7 @@
 from django.db import models
 from Payment.models import Payment
 from User.models import User
-from Product.models import Cart, Product
-from Analytics.utils import process_order_item
+from Product.models import Cart, Product, UserSubscriptionItem
 
 class SalesChannel(models.Model):
     name = models.CharField(max_length=32)
@@ -66,9 +65,9 @@ class Order(models.Model):
 
 
     @staticmethod
-    def create__order(request, promo, method_name): 
+    def create__order(request, promo, method_name):
         """Создание заказа, dilivery это статус доставки если она есть"""
-        
+
         products = Cart.get_user_cart(request.user)
 
         user = request.user
@@ -106,11 +105,21 @@ class Order(models.Model):
             product_dict=product_dict
         )
 
+        for key, value in product_dict:
+            product = product_dict[key]['product']
+            try:
+                UserSubscriptionItem.create(
+                    order=order,
+                    user=user,
+                    subscription=product.subscription,
+                )
+            except: pass
+
         Cart.delete_user_cart(user)
 
         return order
-    
-    def cancel_order(self) -> bool: 
+
+    def cancel_order(self) -> bool:
         """Возврат средств, возвращат успешность выполнения функции"""
 
         answer = self.payment.cancel_payment()

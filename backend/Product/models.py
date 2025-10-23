@@ -1,3 +1,5 @@
+from datetime import timedelta, timezone
+from Order.models import Order
 from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
@@ -103,7 +105,7 @@ class Product(models.Model):
         self.save()
     
     @staticmethod
-    def create_product(name, description, price, category, weight=0, weight_start=0, weight_end=0, type='Product'):
+    def create_product(name, description, price, category, weight=0, weight_start=0, weight_end=0, type='Product', duration_days=30):
         """Создание продукта и прикрепление его к категории"""
         
         if weight != 0:
@@ -124,9 +126,14 @@ class Product(models.Model):
             ) 
             pr.save()
             if type == 'Subscription':
-                pass
+                sub = Subscription(
+                    product=pr,
+                    duration_days=duration_days,
+                    description=description
+                )
+                sub.save()
         except: return None
-        return pr
+        return pr, sub
         
 
     def update_product(self, image=None, name=None, description=None, price=None): 
@@ -564,14 +571,12 @@ class GroupPromotion(models.Model):
     def get_user_personal_discount(user):
         """Возвращает акции пользовательской группы"""
         return GroupPromotion.objects.filter(
-            user_group=UserGroup.get_user_groups__list(
-                user
-                )
+            user_group=UserGroup.get_user_groups__list(user)
             )
 
 class Subscription(models.Model):
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
-    is_active = models.BooleanField(default=False)
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='subscription')
+    is_active = models.BooleanField(default=True)
     duration_days = models.SmallIntegerField()
     description = models.TextField(max_length=512, default='')
 
@@ -583,18 +588,45 @@ class UserSubscriptionItem(models.Model):
     subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     started_at = models.DateField(auto_now_add=True)
-    active = models.BooleanField(default=True)
+    active = models.BooleanField(default=False)
+    Order = models.ForeignKey(Order, on_delete=models.SET_NULL)
 
     class Meta:
         verbose_name = 'Подписка пользователя'
         verbose_name_plural = 'Подписки пользователей'
 
-    def __call__(self): pass # При вызове класса как метода будет проверять все подписки на срок годности и обновлять переменную active
-
     @cached_property
-    def create(self, User: type[User], Subscription: type[Subscription]) -> None:
-        pass # создает подписку
+    @staticmethod
+    def create(User: type[User], Subscription: type[Subscription]) -> None:
+        item = UserSubscriptionItem(
+            user=User,
+            subsription=Subscription,
+        )
+        item.save()
+
+    @staticmethod
+    def check_all_user_subscriptions(user: type[User]) -> None:
+        try:
+            subs = UserSubscriptionItem.objects.filter(user=user)
+            for sub in subs:
+                if sub.is_active and sub.order.payment.is_payment:
+                    sub.active = True
+                else: sub.active = False
+
+                sub.save()
+        except: pass
+
+    @property
+    def end_date(self):
+        """Возвращает дату окончания подписки"""
+        if self.started_at and self.subscription.duration_days:
+            return self.startet_at + timedelta(days=self.subscription.duration_days)
+        return None
 
     @property
     @cached_property
-    def is_active(self) -> bool: pass # при вызове будет отображать активна ли подписка и проверять это
+    def is_active(self) -> bool:
+        if self.end_date:
+            if timezone.now().date() <= self.end_date:
+                return True
+        return False
