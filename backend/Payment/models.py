@@ -60,6 +60,9 @@ class Payment(models.Model):
             fee = 0
         )
 
+        from .tasks import check_payment_status
+        check_payment_status(cls=self)
+
         return Payment.objects.last()
 
     def check__status(self): 
@@ -76,9 +79,10 @@ class Payment(models.Model):
             from Product.models import UserSubscriptionItem
             UserSubscriptionItem.check_all_user_subscriptions(self.user)
 
-        from Analytics.models import PaymentAnalysis
-        PaymentAnalysis.objects.add_entry(self)
-        
+            from Analytics.models import PaymentAnalysis
+            PaymentAnalysis.objects.add_entry(self)
+        else: raise ZeroDivisionError
+
         return method_answer
 
     def cancel_payment(self) -> bool: 

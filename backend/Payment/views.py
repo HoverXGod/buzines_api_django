@@ -3,6 +3,7 @@ from BaseSecurity.permissions import isSuperUser, isAutorized
 from BaseSecurity.services import SecureResponse
 from .serializers import *
 from .models import *
+from .tasks import check_payment_status
 from Order.models import Order
 
 class CancelPayment(APIView): 
@@ -28,16 +29,15 @@ class CheckStatus(APIView):
     serializer_class = PaymentSerializer
 
     def get(self, request):
+        try:
+            task = check_payment_status(
+                cls=Payment.objects.get(id=request.GET['payment_id'])
+            )
 
-        payment = Payment.objects.get(id=request.GET['payment_id'])
+        except: return SecureResponse(request=request, status=500)
 
-        answer = Order.objects.get(payment=payment).update_status()
-
-        try:    
-            return SecureResponse(
-                request=request,
-                data=answer,
-                status=200
-                )
-        except: 
-            return SecureResponse(request=request, status=400)
+        return SecureResponse(
+            request = request,
+            data = {"task_id": task.id},
+            status = 200
+            )

@@ -127,10 +127,8 @@ class Order(models.Model):
         
         return answer
     
-    def update_status(self) -> str:
+    def update_status(self, status) -> str:
         """Возвращает и обновляет статус платежа"""
-
-        status = self.payment.check__status()
     
         
         from Analytics.models import SalesFunnel

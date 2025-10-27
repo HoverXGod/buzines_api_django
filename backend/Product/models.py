@@ -605,7 +605,7 @@ class UserSubscriptionItem(models.Model):
         item.save()
 
     @staticmethod
-    def check_all_user_subscriptions(user: type[User]) -> None:
+    def check_all_user_subscriptions(user: type[User, models.ForeignKey]) -> None:
         try:
             subs = UserSubscriptionItem.objects.filter(user=user)
             for sub in subs:
