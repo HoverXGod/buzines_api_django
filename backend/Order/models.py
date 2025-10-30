@@ -1,7 +1,6 @@
 from django.db import models
 from Payment.models import Payment
 from User.models import User
-from Product.models import Cart, Product, UserSubscriptionItem
 
 class SalesChannel(models.Model):
     name = models.CharField(max_length=32)
@@ -68,6 +67,9 @@ class Order(models.Model):
     def create__order(request, promo, method_name):
         """Создание заказа, dilivery это статус доставки если она есть"""
 
+        from Product.models import Cart
+        SalesChannel.check_base_chanell()
+
         products = Cart.get_user_cart(request.user)
 
         user = request.user
@@ -77,7 +79,7 @@ class Order(models.Model):
         price_with_discount = data[0]
         product_dict = data[1]
 
-        cost = Cart.calculate_base_cost(user=user)
+        cost = Cart.calculate_base_cost(user_id=user.id)
         discount = cost - price_with_discount
 
         Order.objects.create(
@@ -97,7 +99,7 @@ class Order(models.Model):
 
         order = Order.objects.last()
 
-        from events import order_create
+        from context.Order.order_create import order_create
 
         order_create(
             request=request,
@@ -105,7 +107,7 @@ class Order(models.Model):
             product_dict=product_dict
         )
 
-        for key, value in product_dict:
+        for key in product_dict:
             product = product_dict[key]['product']
             try:
                 UserSubscriptionItem.create(
@@ -147,7 +149,7 @@ class Order(models.Model):
         return status
 
 class OrderItem(models.Model):
-
+    from Product.models import Product
     order = models.ForeignKey(Order, related_name='items', on_delete=models.CASCADE)
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name='orders')
     quanity = models.PositiveIntegerField(default=1)

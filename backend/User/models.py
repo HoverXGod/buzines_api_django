@@ -3,6 +3,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
 from datetime import datetime
+from processors.cache import cache_method
 from django.utils.functional import cached_property
 
 class User(AbstractUser):   
@@ -42,7 +43,7 @@ class User(AbstractUser):
         self.password = raw_password
         self.save
 
-    @cached_property
+    @cache_method
     def get_user_api(self):
         """Получение последнего апи ключа пользователя"""
         from Api_Keys.models import Api_key
@@ -58,7 +59,6 @@ class User(AbstractUser):
         self.base_password = Encryption.encrypt_data(value)
         self.save()
 
-    @cached_property
     def __isStaff(self, value: bool) -> bool:
         isStaff = value
 
@@ -169,13 +169,11 @@ class User(AbstractUser):
             return None
         except: pass
 
-        user = User(
-                username = login,
-                base_password = Encryption.encrypt_data(password),
-                first_name = first_name
-            )
-
-        try: user.save()
+        try:
+            User(   username = login,
+                    base_password = Encryption.encrypt_data(password),
+                    first_name = first_name
+                ).save()
         except: return None
         
         user = User.objects.last()
@@ -194,14 +192,14 @@ class User(AbstractUser):
 
         try: 
             user = User.objects.get(username=login)
-        except: 
+        except:
             return None
         
         user_acc_password = Encryption.decrypt_data(user.base_password)
 
         if user_acc_password != password: return None
 
-        jwt_token = JWT_auth.compile_jwt_token(user) 
+        jwt_token = JWT_auth.compile_jwt_token(user)
 
         user.last_login = datetime.now().__str__()
         user.save()
@@ -235,13 +233,8 @@ class UserGroup(models.Model):
     def permissions_list(self, value:list):
         return ",".join(value)
     
-    @permissions_list.getter
-    @cached_property
-    def permissions_list(self) -> list:
-        return self.permissions.split(",")
-    
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_groups__id(user):
         """Возвращает список Айдишников групп пользователя"""
 
@@ -256,7 +249,7 @@ class UserGroup(models.Model):
         return return_list
     
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_groups__list(user):
         """Возвращает список Групп групп пользователя"""
 

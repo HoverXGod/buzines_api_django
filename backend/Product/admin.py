@@ -67,7 +67,7 @@ class CategoryAdmin(BaseAdmin):
     image_preview.short_description = "Превью"
 
     def product_count(self, obj):
-        return obj.product_set.count()
+        return obj.products.count()
     product_count.short_description = "📦 Товаров"
 
     def status_badge(self, obj):

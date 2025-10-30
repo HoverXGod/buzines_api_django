@@ -255,11 +255,12 @@ class CohortAnalysisManager(models.Manager):
         )
         
         # Обновляем метрики
-        metrics = self._calculate_metrics(cohort_date, retention_day, primary_category)
-        if cohort.metrics != metrics:
-            cohort.metrics = metrics
-            cohort.save(update_fields=['metrics'])
-        
+        try:
+            metrics = self._calculate_metrics(cohort_date, retention_day, primary_category)
+            if cohort.metrics != metrics:
+                cohort.metrics = metrics
+                cohort.save(update_fields=['metrics'])
+        except: pass
         return cohort
 
     def _get_primary_category(self, cohort_date, retention_day):

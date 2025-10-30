@@ -1,6 +1,5 @@
 from Encryption.utils import Encryption
-from django.utils.functional import cached_property
-
+from processors.cache import cache_method
 class Key_Generator:
 
     @staticmethod
@@ -36,7 +35,6 @@ class Key_Generator:
 class JWT_auth:
     
     @staticmethod
-    @cached_property
     def compile_jwt_form(User) -> str:
         from datetime import datetime
         """Компиляция JWT формы, это не зашифрованная версия токена без подписи"""
@@ -85,7 +83,7 @@ class JWT_auth:
         return baseJWT[::-1][0] == Encryption.sign.decode()
     
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_permissions(jwt_token: str) -> list:
         """Получаем права пользователя из JWT Токена"""
 
@@ -124,7 +122,6 @@ class JWT_auth:
         return count_jwt_accept == count_form
     
     @staticmethod
-    @cached_property
     def jwt_to_user(jwt_token):
         """По JWT токену ищет пользователя в базе данных и возваращет его"""
         from User.models import User
@@ -143,20 +140,22 @@ class JWT_auth:
     @staticmethod
     def get_jwt(request) -> str:
         """Получение JWT или JAT токена из request"""
-
         try:
             return dict(request.session.items())['JWTCloudeToken']
         except:
-            try: 
+            try:
                 return dict(request.META.items())['HTTP_JWTCLOUDETOKEN']
             except:
                 try:
                     return request.COOKIES['JWTCloudeToken']
                 except:
                     try:
-                        from Api_Keys.utils import ApiManager
-                        return ApiManager.get_api_key(api_key=request.META['API key'])._generate_jat()
-                    except: return None
+                        return request.GET['JWTCloudeToken']
+                    except:
+                        try:
+                            from Api_Keys.utils import ApiManager
+                            return ApiManager.get_api_key(api_key=request.META['API key'])._generate_jat()
+                        except: return None
 
     @staticmethod 
     def get_jwt_super(request) -> str:

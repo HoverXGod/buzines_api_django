@@ -5,6 +5,7 @@ from Content.serializers import PageTextSerializers
 from Content.models import PageText
 from Content.services import ImagesManager
 from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
 class CreatePageText(APIView): 
 
@@ -36,12 +37,13 @@ class UpdatePageText(APIView):
         if text != None: return SecureResponse(request=request, data=self.serializer_class(instance=text).data, status=200)
         else: return SecureResponse(request=request, data='', status=400) 
 
-@cache_page(60*60*18)
+
 class GetPageTexts(APIView):
     
     serializer_class = PageTextSerializers    
     permission_classes = [isSuperUser]
 
+    @method_decorator(cache_page(60*60*18))
     def get(self, request): 
         page_name = request.GET['page_name']
         

@@ -6,6 +6,8 @@ from .serializers import ApiKeySerializer
 from User.serializers import UserSerializer
 from User.models import User
 from .models import Api_key
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
 class CreateApiKey(APIView):
 
@@ -81,6 +83,7 @@ class ShowMyApiKeys(APIView):
     serializer_class = ApiKeySerializer
     permission_classes = [isAutorized]
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         user = request.user
 
@@ -94,6 +97,7 @@ class ShowUserApiKeys(APIView):
     serializer_classes = [ApiKeySerializer, UserSerializer]
     permission_classes = [isSuperUser]
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         user_id = request.GET['user_id']
 

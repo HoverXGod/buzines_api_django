@@ -4,12 +4,15 @@ from BaseSecurity.services import SecureResponse
 from .serializers import PostSerializer
 from User.serializers import AuthorSerializer
 from .models import Post
+from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
 class GetAuthorPost(APIView): 
 
     serializer_class = AuthorSerializer
     permission_classes = []
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         post_id = request.GET['post_id']
         
@@ -25,6 +28,7 @@ class GetPost(APIView):
     serializer_class = PostSerializer
     permission_classes = []
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         post_id = request.GET['post_id']
 
@@ -80,6 +84,7 @@ class GetPosts(APIView):
     
     serializer_class = PostSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         posts = Post.objects.all()
 

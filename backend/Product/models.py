@@ -1,8 +1,8 @@
 from datetime import timedelta, timezone
-from Order.models import Order
 from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
+from processors.cache import cache_method
 from django.utils.functional import cached_property
 
 class Category(models.Model):
@@ -81,8 +81,8 @@ class Product(models.Model):
     image = models.CharField(max_length=256, default='', null=True)
     category = models.ForeignKey(Category, on_delete=models.CASCADE, related_name='products')
     is_active = models.BooleanField(default=True)
-    weight_start = models.FloatField()
-    weight_end = models.FloatField()
+    weight_start = models.FloatField(default=0.00)
+    weight_end = models.FloatField(default=0.00)
     cost_price = models.FloatField(blank=True, default=1.0)
     type = models.CharField(max_length=64, choices=PRODUCT_TYPE, default='Product')
 
@@ -151,7 +151,7 @@ class Product(models.Model):
 
 
     @staticmethod
-    @cached_property
+    @cache_method
     def get_products(category_name): 
         """Вовзращает все активные продукты в категории по ее имени"""
 
@@ -169,11 +169,15 @@ class Product(models.Model):
         return bufer
     
     def add_view(self):
-        self.analysis.add_view() #TODO: доделать надо
+        try:
+            self.analysis.add_view() #TODO: доделать надо
+        except: pass
 
     def add_cart(self):
-        self.analysis.add_cart()
-    
+        try:
+            self.analysis.add_cart()
+        except: pass
+
 class Cart(models.Model):
     """Хранение товаров пользователей"""
     
@@ -188,7 +192,7 @@ class Cart(models.Model):
 
 
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_cart(user):
         """Возвращает полный перечень товаров пользователя"""
 
@@ -238,8 +242,10 @@ class Cart(models.Model):
     
 
     @staticmethod
-    @cached_property
-    def calculate_base_cost(user):
+    @cache_method
+    def calculate_base_cost(user_id):
+
+        user = User.objects.get(id=user_id)
 
         cart_items = Cart.objects.filter(user=user).select_related('product')
         
@@ -261,10 +267,12 @@ class Cart(models.Model):
             original_total += base_price
 
         return original_total
-    
+
+    @cache_method
     @staticmethod
-    @cached_property
     def calculate_total(user, promo_code=None):
+
+        # user = User.objects.get(id=user_id)
         
         cart_items = Cart.objects.filter(user=user).select_related('product')
 
@@ -276,19 +284,19 @@ class Cart(models.Model):
         promo_discounts = Promotion.objects.filter(
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount')) or []
         
         personal_discounts = PersonalDiscount.objects.filter(
             user=user,
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount')) or []
 
         group_discounts = GroupPromotion.objects.filter(
             user_group_id__in=UserGroup.get_user_groups__id(user),
             product_id__in=product_ids,
             on_start=True
-        ).values('product_id', 'name').annotate(max_discount=Max('discount'))
+        ).values('product_id', 'name').annotate(max_discount=Max('discount')) or []
 
         promo_dict = list()
         personal_dict = list()
@@ -343,19 +351,28 @@ class Cart(models.Model):
 
             discounts = valid_discounts
 
-            if discounts[0]['promotion'] == promo_disc['promotion'] and discounts[0]['discount'] == promo_disc['discount']: 
-                promo = "promo"
-                disc = discounts[0]
-            elif discounts[0]['promotion'] == personal_disc['promotion'] and discounts[0]['discount'] == personal_disc['discount']: 
-                promo = "pers"
-                disc = discounts[0]
-            elif discounts[0]['promotion'] == group_disc['promotion'] and discounts[0]['discount'] == group_disc['discount']: 
-                promo = "group"
-                disc = discounts[0]
-        
-            max_disc = disc['discount']
-            promotion = disc['promotion']
+            disc = {}
 
+            try:
+                if discounts[0]['promotion'] == promo_disc['promotion'] and discounts[0]['discount'] == promo_disc['discount']:
+                    promo = "promo"
+                    disc = discounts[0]
+            except: pass
+            try:
+                if discounts[0]['promotion'] == personal_disc['promotion'] and discounts[0]['discount'] == personal_disc['discount']:
+                    promo = "pers"
+                    disc = discounts[0]
+            except: pass
+            try:
+                if discounts[0]['promotion'] == group_disc['promotion'] and discounts[0]['discount'] == group_disc['discount']:
+                    promo = "group"
+                    disc = discounts[0]
+            except: pass
+
+            try:
+                max_disc = disc['discount']
+                promotion = disc['promotion']
+            except: max_disc, promotion, promo = 0, "", ""
             # Применяем скидку к товару
             discounted_price = base_price * (100 - max_disc) / 100
             total_with_discounts += discounted_price
@@ -446,7 +463,7 @@ class Promotion(models.Model):
         return True
     
     @staticmethod
-    @cached_property
+    @cache_method
     def get_all_promotions():
         """Получение всех активных акций"""
 
@@ -504,7 +521,7 @@ class PersonalDiscount(models.Model):
         return True
     
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_personal_discount(user):
         """Получение всех индвидуальных предложенй пользователя"""
         
@@ -529,7 +546,7 @@ class Promocode(models.Model):
         ).save()
 
     @staticmethod
-    @cached_property
+    @cache_method
     def get_promo(code): 
         """Получение промокода по коду"""
 
@@ -567,7 +584,7 @@ class GroupPromotion(models.Model):
     def created(self): return self.start_date
 
     @staticmethod
-    @cached_property
+    @cache_method
     def get_user_personal_discount(user):
         """Возвращает акции пользовательской группы"""
         return GroupPromotion.objects.filter(
@@ -585,18 +602,19 @@ class Subscription(models.Model):
         verbose_name_plural = 'Подписки'
 
 class UserSubscriptionItem(models.Model):
+    from Order.models import Order
     subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='subscriptions')
     started_at = models.DateField(auto_now_add=True)
     active = models.BooleanField(default=False)
-    Order = models.ForeignKey(Order, on_delete=models.SET_NULL)
+    Order = models.ForeignKey(Order, on_delete=models.SET_NULL, null=True)
 
     class Meta:
         verbose_name = 'Подписка пользователя'
         verbose_name_plural = 'Подписки пользователей'
 
-    @cached_property
     @staticmethod
+    @cache_method
     def create(User: type[User], Subscription: type[Subscription]) -> None:
         item = UserSubscriptionItem(
             user=User,

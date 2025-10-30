@@ -8,13 +8,14 @@ from BaseSecurity.utils import get_client_ip
 from django.core.management import call_command
 from Analytics.models import CustomerBehavior
 from django.views.decorators.cache import cache_page
+from django.utils.decorators import method_decorator
 
-@cache_page(60 * 60 * 18)
 class GetProductsCategory(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         category_name = request.GET['category_name']
 
@@ -36,12 +37,12 @@ class GetProductsCategory(APIView):
         except: 
             return SecureResponse(request=request, status=400)
 
-@cache_page(60 * 60 * 18)
 class GetAllProducts(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         if request.user.is_authenticated:
             CustomerBehavior.objects.get(user = request.user).add_view()
@@ -55,12 +56,12 @@ class GetAllProducts(APIView):
             )
 
 
-@cache_page(60 * 60 * 18)
 class GetProduct(APIView):
     
     permission_classes = []
     serializer_class = ProductSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         product_id = request.GET['product_id']
         if request.user.is_authenticated:
@@ -198,12 +199,12 @@ class AddImageCategory(APIView):
     def get(self, request):
         return SecureResponse(request=request)
 
-@cache_page(60 * 60 * 18)
 class GetAllCategorys(APIView):
     
     permission_classes = []
     serializer_class = CategorySerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
         try:
             return SecureResponse(
@@ -310,7 +311,9 @@ class AddProductInCart(APIView):
 
         product.add_cart()
 
-        CustomerBehavior.objects.get(user = request.user).cart_action()
+        try:
+            CustomerBehavior.objects.get(user = request.user).cart_action()
+        except: pass
 
         try:
             quanity = request.GET['weight_quanity']
@@ -355,13 +358,13 @@ class AddProductInCart(APIView):
                 )
         except: 
             return SecureResponse(request=request, status=400)
-        
-@cache_page(60 * 60 * 18)
+
 class GetAllPromotions(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = PromotionSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -375,13 +378,13 @@ class GetAllPromotions(APIView):
                 )
         except: 
             return SecureResponse(request=request, status=400)
-        
-@cache_page(60 * 60 * 18)
+
 class GetPersonalDiscount(APIView):
     
     permission_classes = [isAutorized]
     serializer_classes = [PersonalDiscountSerializer, GroupPromotionSerializer]
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -401,12 +404,12 @@ class GetPersonalDiscount(APIView):
         except: 
             return SecureResponse(request=request, status=400)
 
-@cache_page(60 * 60 * 18)
 class GetUserCart(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = UserCartSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -422,12 +425,12 @@ class GetUserCart(APIView):
             return SecureResponse(request=request, status=400)
         
 
-@cache_page(60 * 60 * 18)
 class GetPromocode(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = PromoCodeSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -544,13 +547,13 @@ class RemoveUserCart(APIView):
                 )
         except: 
             return SecureResponse(request=request, status=400)
-        
-@cache_page(60 * 60 * 18)
+
 class GetCartCost(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -563,20 +566,20 @@ class GetCartCost(APIView):
                 )
         except: 
             return SecureResponse(request=request, status=400)
-        
-@cache_page(60 * 60 * 18)
+
 class GetCartDiscount(APIView):
     
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
+    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
             return SecureResponse(
                 request=request, 
                 data={
-                    "discount":Cart.calculate_base_cost(request.user) - Cart.calculate_total(request.user)
+                    "discount":Cart.calculate_base_cost(request.user.id) - Cart.calculate_total(request.user.id)
                 },
                 status=200
                 )

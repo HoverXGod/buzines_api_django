@@ -21,12 +21,11 @@ class AuthenticationMiddleware(MiddlewareMixin):
     def __call__(self, request):
         token = JWT_auth.get_jwt(request)
         if token == None:
-            user = AnonymousUser()  
+            request.user = AnonymousUser()
             return self.get_response(request)
 
         sm = SessionManager(request)
         sm.auth__token(token)
-
         
         if JWT_auth.verify_jwt_token(token):
             user = JWT_auth.jwt_to_user(jwt_token=token)

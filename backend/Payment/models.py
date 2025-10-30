@@ -51,7 +51,7 @@ class Payment(models.Model):
         method = get_method(method_name)
         method.create_payment(products, cost, discount, request)
         
-        Payment.objects.create(
+        this_payment = Payment.objects.create(
             user = user,
             method = method.name,
             cost = cost,
@@ -60,10 +60,12 @@ class Payment(models.Model):
             fee = 0
         )
 
-        from .tasks import check_payment_status
-        check_payment_status(cls=self)
+        this_payment.save()
 
-        return Payment.objects.last()
+        from .tasks import check_payment_status
+        check_payment_status(cls=method.id)
+
+        return this_payment
 
     def check__status(self): 
         """Проверка и обновление статуса платежа"""

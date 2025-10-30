@@ -18,8 +18,6 @@ class UserGroupManager:
 
         return [item.permissions_list for item in items]
 
-
-
     @staticmethod 
     def set_group_permissions(group, permissions): 
         UserGroup.permissions_list = permissions

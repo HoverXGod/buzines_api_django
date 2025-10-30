@@ -3,6 +3,7 @@ from User.models import User
 from datetime import datetime
 from .services import ImagesManager
 from Product.models import Product
+from processors.cache import cache_method
 
 class Post(models.Model):
     """Модель поста, имеющая базовые методы, ключ привязан к пользователю"""
@@ -73,6 +74,7 @@ class PageText(models.Model):
         verbose_name_plural = 'Тексты страниц'  # Имя модели во множественном числе
 
     @staticmethod
+    @cache_method
     def get_page_texts(page_name): 
         """Возвращает текст станицы по индексу"""
         

@@ -5,7 +5,11 @@ from .services import get_method
 from Order.models import Order
 
 @background.task()
-def check_payment_status(cls: type[Payment]) -> None:
+def check_payment_status(cls: type[str]) -> None:
+
+    from Payment.models import Payment
+
+    cls = Payment.objects.get(payment_id=cls)
 
     method_answer = get_method(cls.method, cls.payment_id).check_status()
     cls.status = method_answer
