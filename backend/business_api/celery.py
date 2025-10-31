@@ -1,12 +1,11 @@
 import os
 from celery import Celery
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hover_backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'business_api.settings')
 
-app = Celery('hover_backend')
+app = Celery('business_api')
 app.config_from_object('django.conf:settings', namespace='CELERY')
-app.autodiscover_tasks()
 
-@app.task(bind=True)
-def debug_task(self):
-    print(f'Request: {self.request!r}')
+app.autodiscover_tasks([
+    'Payment',
+])

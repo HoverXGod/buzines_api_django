@@ -1,4 +1,4 @@
-from processors import context_thread
+from core import context_thread
 
 @context_thread
 def order_thread(order, request):

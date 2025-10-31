@@ -3,7 +3,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
 from datetime import datetime
-from processors.cache import cache_method
+from core.cache import cache_method
 from django.utils.functional import cached_property
 
 class User(AbstractUser):   

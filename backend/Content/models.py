@@ -3,7 +3,7 @@ from User.models import User
 from datetime import datetime
 from .services import ImagesManager
 from Product.models import Product
-from processors.cache import cache_method
+from core.cache import cache_method
 
 class Post(models.Model):
     """Модель поста, имеющая базовые методы, ключ привязан к пользователю"""

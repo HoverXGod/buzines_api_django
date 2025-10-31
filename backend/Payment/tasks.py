@@ -1,13 +1,11 @@
-from .models import Payment
-from processors import background
-from time import timezone
-from .services import get_method
+from Payment.models import Payment
+from celery import shared_task
+from datetime import datetime
+from Payment.services import get_method
 from Order.models import Order
 
-@background.task()
-def check_payment_status(cls: type[str]) -> None:
-
-    from Payment.models import Payment
+@shared_task(bind=True, name='Payment.tasks.check_payment_status')
+def check_payment_status(self, cls: type[str]) -> None:
 
     cls = Payment.objects.get(payment_id=cls)
 
@@ -16,7 +14,7 @@ def check_payment_status(cls: type[str]) -> None:
     cls.save()
 
     if cls.is_payment:
-        cls.pay_time = timezone.now()
+        cls.pay_time = datetime.now()
         cls.save()
 
         from Product.models import UserSubscriptionItem
@@ -25,6 +23,10 @@ def check_payment_status(cls: type[str]) -> None:
         from Analytics.models import PaymentAnalysis
         PaymentAnalysis.objects.add_entry(cls)
 
-        cls.order.update_status(method_answer)
+        cls.order.first().update_status(method_answer)
 
-    else: raise ZeroDivisionError
+    else:
+        self.request.retries += 1
+        raise self.retry(countdown=15)
+
+    return method_answer

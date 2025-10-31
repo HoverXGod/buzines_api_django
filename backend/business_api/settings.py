@@ -15,14 +15,14 @@ import os
 from celery import Celery
 
 # Настройка Celery
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'hover_backend.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'business_api.settings')
 
-app = Celery('hover_backend')
+app = Celery('business_api')
 
 # Конфигурация Celery
 app.conf.update(
-    broker_url='pyamqp://guest:guest@localhost:5672//',
-    result_backend='django-db',
+    broker_url='amqp://guest:guest@rabbitmq:5672//',
+    result_backend='rpc://',  # или 'redis://redis:6379/0' если есть Redis
     task_serializer='json',
     accept_content=['json'],
     result_serializer='json',
@@ -63,6 +63,9 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+CELERY_IMPORTS = [
+    'Payment.tasks',
+]
 
 # Application definition
 
@@ -85,10 +88,14 @@ INSTALLED_APPS = [
     'Payment',
     'Order',
     'Analytics',
+    'Cache',
+    'TaskManager',
 
     'rest_framework',
     'drf_spectacular',
     'import_export',
+    'django_celery_results',
+    'django_celery_beat',
     'django_user_agents',
     'django_json_widget',
     'cachalot',

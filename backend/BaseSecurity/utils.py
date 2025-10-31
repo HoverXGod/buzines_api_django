@@ -1,5 +1,5 @@
 from Encryption.utils import Encryption
-from processors.cache import cache_method
+from core.cache import cache_method
 class Key_Generator:
 
     @staticmethod

@@ -9,6 +9,8 @@ services:
       - ./backend:/app
     ports:
       - "8000:8000"
+    networks:
+      - app-network
 
   db:
     image: postgres:latest
@@ -20,6 +22,8 @@ services:
       - postgres_data:/var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
+    networks:
+      - app-network
 
   redis:
     image: redis:latest
@@ -28,6 +32,8 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --appendonly yes
+    networks:
+      - app-network
 
   rabbitmq:
     image: rabbitmq:3-management
@@ -39,8 +45,53 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+          - app-network
+
+  celery_worker:
+    build: .
+    working_dir: /app
+    command: celery -A business_api worker --loglevel=info --concurrency=4
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=business_api.settings
+    depends_on:
+      - redis
+      - db
+      - web
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - app-network
+
+    # Celery Beat для периодических задач
+  celery_beat:
+    build: .
+    working_dir: /app
+    command: celery -A business_api beat --loglevel=info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DEBUG=1
+      - DJANGO_SETTINGS_MODULE=business_api.settings
+    depends_on:
+      - redis
+      - db
+      - web
+      - celery_worker
+      - rabbitmq
+    restart: unless-stopped
+    networks:
+      - app-network
+
 
 volumes:
   postgres_data:
   redis_data:
   rabbitmq_data:
+
+networks:
+  app-network:
+    driver: bridge

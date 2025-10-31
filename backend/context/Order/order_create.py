@@ -1,4 +1,4 @@
-from processors import context_thread
+from core import context_thread
 from context.Analytics import order_item_thread, order_thread
 from context.Order import create_order_items_thread
 

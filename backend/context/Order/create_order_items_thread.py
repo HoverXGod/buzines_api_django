@@ -1,4 +1,4 @@
-from processors import context_thread
+from core import context_thread
 
 @context_thread
 def create_order_items_thread(order, product_dict):

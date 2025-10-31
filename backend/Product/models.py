@@ -2,7 +2,7 @@ from datetime import timedelta, timezone
 from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
-from processors.cache import cache_method
+from core.cache import cache_method
 from django.utils.functional import cached_property
 
 class Category(models.Model):

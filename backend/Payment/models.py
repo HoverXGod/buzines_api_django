@@ -51,7 +51,7 @@ class Payment(models.Model):
         method = get_method(method_name)
         method.create_payment(products, cost, discount, request)
         
-        this_payment = Payment.objects.create(
+        this_payment = Payment(
             user = user,
             method = method.name,
             cost = cost,
@@ -61,9 +61,6 @@ class Payment(models.Model):
         )
 
         this_payment.save()
-
-        from .tasks import check_payment_status
-        check_payment_status(cls=method.id)
 
         return this_payment
 

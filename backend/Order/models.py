@@ -82,16 +82,18 @@ class Order(models.Model):
         cost = Cart.calculate_base_cost(user_id=user.id)
         discount = cost - price_with_discount
 
-        Order.objects.create(
-            user = user,
-            payment = Payment.create__payment(
+        payment = Payment.create__payment(
                 method_name,
                 cost,
                 request,
                 products,
                 discount,
                 user
-                ),
+                )
+
+        Order.objects.create(
+            user = user,
+            payment = payment,
             products = Cart.get_user_cart_id(user=user).split(','),
             delivery = "",
             chanell = SalesChannel.objects.get(id=1)
@@ -117,7 +119,10 @@ class Order(models.Model):
                 )
             except: pass
 
-        Cart.delete_user_cart(user)
+        # Cart.delete_user_cart(user)
+
+        from Payment.tasks import check_payment_status
+        check_payment_status.delay(payment.payment_id)
 
         return order
 
