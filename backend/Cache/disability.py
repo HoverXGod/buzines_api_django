@@ -42,8 +42,6 @@ def core_cache(sender, instance, **kwargs):
 
     instance_cache = get_cache_used_models()
 
-    print(instance_cache)
-
     if model_name in instance_cache:
         instance_cache.remove(model_name)
 
