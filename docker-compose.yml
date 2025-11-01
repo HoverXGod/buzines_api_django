@@ -67,24 +67,24 @@ services:
       - app-network
 
     # Celery Beat для периодических задач
-  celery_beat:
-    build: .
-    working_dir: /app
-    command: celery -A business_api beat --loglevel=info
-    volumes:
-      - ./backend:/app
-    environment:
-      - DEBUG=1
-      - DJANGO_SETTINGS_MODULE=business_api.settings
-    depends_on:
-      - redis
-      - db
-      - web
-      - celery_worker
-      - rabbitmq
-    restart: unless-stopped
-    networks:
-      - app-network
+#  celery_beat:
+#    build: .
+#    working_dir: /app
+#    command: celery -A business_api beat --loglevel=info
+#    volumes:
+#      - ./backend:/app
+#    environment:
+#      - DEBUG=1
+#      - DJANGO_SETTINGS_MODULE=business_api.settings
+#    depends_on:
+#      - redis
+#      - db
+#      - web
+#      - celery_worker
+#      - rabbitmq
+#    restart: unless-stopped
+#    networks:
+#      - app-network
 
 
 volumes:

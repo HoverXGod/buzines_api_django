@@ -1,4 +1,4 @@
-# apps/analytics/signals.py
+# apps/analytics/disability.py
 from django.apps import apps
 from django.db.models.signals import post_migrate
 from django.dispatch import receiver

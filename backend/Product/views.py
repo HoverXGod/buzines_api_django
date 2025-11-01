@@ -7,7 +7,7 @@ from Analytics.models import SalesFunnel
 from BaseSecurity.utils import get_client_ip
 from django.core.management import call_command
 from Analytics.models import CustomerBehavior
-from django.views.decorators.cache import cache_page
+from core.cache import cache_api_view
 from django.utils.decorators import method_decorator
 
 class GetProductsCategory(APIView):
@@ -15,13 +15,14 @@ class GetProductsCategory(APIView):
     permission_classes = []
     serializer_class = ProductSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Category]))
     def get(self, request):
         category_name = request.GET['category_name']
 
         if request.user.is_authenticated:
-            CustomerBehavior.objects.get(user = request.user).add_view()
-
+            try:
+                CustomerBehavior.objects.get(user = request.user).add_view()
+            except: pass
         try:    
             return SecureResponse(
                 request=request,
@@ -42,10 +43,13 @@ class GetAllProducts(APIView):
     permission_classes = []
     serializer_class = ProductSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Product]))
     def get(self, request):
+
         if request.user.is_authenticated:
-            CustomerBehavior.objects.get(user = request.user).add_view()
+            try:
+                CustomerBehavior.objects.get(user = request.user).add_view()
+            except: pass
         return SecureResponse(
             request=request,
             data=self.serializer_class(
@@ -61,7 +65,7 @@ class GetProduct(APIView):
     permission_classes = []
     serializer_class = ProductSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Product]))
     def get(self, request):
         product_id = request.GET['product_id']
         if request.user.is_authenticated:
@@ -204,7 +208,7 @@ class GetAllCategorys(APIView):
     permission_classes = []
     serializer_class = CategorySerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
+
     def get(self, request):
         try:
             return SecureResponse(
@@ -364,7 +368,6 @@ class GetAllPromotions(APIView):
     permission_classes = [isAutorized]
     serializer_class = PromotionSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -384,7 +387,6 @@ class GetPersonalDiscount(APIView):
     permission_classes = [isAutorized]
     serializer_classes = [PersonalDiscountSerializer, GroupPromotionSerializer]
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -409,7 +411,6 @@ class GetUserCart(APIView):
     permission_classes = [isAutorized]
     serializer_class = UserCartSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -430,7 +431,6 @@ class GetPromocode(APIView):
     permission_classes = [isAutorized]
     serializer_class = PromoCodeSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -553,7 +553,6 @@ class GetCartCost(APIView):
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:
@@ -572,7 +571,6 @@ class GetCartDiscount(APIView):
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
     def get(self, request):
 
         try:

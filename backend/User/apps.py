@@ -1,15 +1,6 @@
 from django.apps import AppConfig
-
-def _admin_user_profile() -> None:
-    from .models import User
-
-
-    first_user = User.objects.get(username="admin")
-    first_user.password = "admin"
-    first_user.super_user = True
-    # except:
-    #     us = User.register_user("admin", "admin", "admin")
-    #     us.super_user = True
+from django.core.signals import request_started
+from django.dispatch import receiver
 
 class UserConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
@@ -18,5 +9,11 @@ class UserConfig(AppConfig):
     ordering = ['Encryption', 'BaseSecurity']
 
     def ready(self) -> None:
-        _admin_user_profile()
+        @receiver(request_started)
+        def init_admin_user_receiver(sender, **kwargs):
+            from django.core.management import call_command
+
+            call_command('init_admin_user')
+            request_started.disconnect(init_admin_user_receiver)
+
         return super().ready()

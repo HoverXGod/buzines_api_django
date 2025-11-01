@@ -119,7 +119,7 @@ class Order(models.Model):
                 )
             except: pass
 
-        # Cart.delete_user_cart(user)
+        Cart.delete_user_cart(user)
 
         from Payment.tasks import check_payment_status
         check_payment_status.delay(payment.payment_id)

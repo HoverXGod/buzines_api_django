@@ -2,7 +2,6 @@ from datetime import timedelta, timezone
 from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
-from core.cache import cache_method
 from django.utils.functional import cached_property
 
 class Category(models.Model):
@@ -151,7 +150,6 @@ class Product(models.Model):
 
 
     @staticmethod
-    @cache_method
     def get_products(category_name): 
         """Вовзращает все активные продукты в категории по ее имени"""
 
@@ -192,7 +190,6 @@ class Cart(models.Model):
 
 
     @staticmethod
-    @cache_method
     def get_user_cart(user):
         """Возвращает полный перечень товаров пользователя"""
 
@@ -242,7 +239,6 @@ class Cart(models.Model):
     
 
     @staticmethod
-    @cache_method
     def calculate_base_cost(user_id):
 
         user = User.objects.get(id=user_id)
@@ -268,7 +264,6 @@ class Cart(models.Model):
 
         return original_total
 
-    @cache_method
     @staticmethod
     def calculate_total(user, promo_code=None):
 
@@ -463,7 +458,6 @@ class Promotion(models.Model):
         return True
     
     @staticmethod
-    @cache_method
     def get_all_promotions():
         """Получение всех активных акций"""
 
@@ -521,7 +515,6 @@ class PersonalDiscount(models.Model):
         return True
     
     @staticmethod
-    @cache_method
     def get_user_personal_discount(user):
         """Получение всех индвидуальных предложенй пользователя"""
         
@@ -546,7 +539,6 @@ class Promocode(models.Model):
         ).save()
 
     @staticmethod
-    @cache_method
     def get_promo(code): 
         """Получение промокода по коду"""
 
@@ -584,7 +576,6 @@ class GroupPromotion(models.Model):
     def created(self): return self.start_date
 
     @staticmethod
-    @cache_method
     def get_user_personal_discount(user):
         """Возвращает акции пользовательской группы"""
         return GroupPromotion.objects.filter(
@@ -614,7 +605,6 @@ class UserSubscriptionItem(models.Model):
         verbose_name_plural = 'Подписки пользователей'
 
     @staticmethod
-    @cache_method
     def create(User: type[User], Subscription: type[Subscription]) -> None:
         item = UserSubscriptionItem(
             user=User,

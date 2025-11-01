@@ -1,5 +1,5 @@
 from Encryption.utils import Encryption
-from core.cache import cache_method
+from core.cache import cache_api_view
 class Key_Generator:
 
     @staticmethod
@@ -83,7 +83,7 @@ class JWT_auth:
         return baseJWT[::-1][0] == Encryption.sign.decode()
     
     @staticmethod
-    @cache_method
+    @cache_api_view(use_models=[])
     def get_user_permissions(jwt_token: str) -> list:
         """Получаем права пользователя из JWT Токена"""
 

@@ -1,11 +1,9 @@
 from rest_framework.response import Response
 from django.http import HttpRequest
-from django.contrib.auth.models import AnonymousUser
-from User.models import User
 
 class SecureResponse(Response):
     
-    def __init__(self, request, data=None, status=200, headers=None, content_type=None):
+    def __init__(self, request = None, data=None, status=200, headers=None, content_type=None):
 
         if status != 201 and status != 200:
             if data == None or data == '' or data == ' ' or status == 500:
@@ -18,7 +16,11 @@ class SecureResponse(Response):
                 data = 'User is not autorized'
                 status = 401
 
-        request.log.request_status = status
+        if request:
+            request.log.request_status = status
+
+        self.data = data
+        self.status = status
 
         super().__init__(data=data,
                          status=status,
@@ -66,7 +68,7 @@ class SessionManager:
 
         return True
     
-    def auth__user(self, user: User | AnonymousUser) -> bool:
+    def auth__user(self, user) -> bool:
         self.request.user = user
         
         return True

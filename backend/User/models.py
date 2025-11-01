@@ -3,8 +3,8 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from Encryption.utils import Encryption
 from BaseSecurity.utils import Key_Generator
 from datetime import datetime
-from core.cache import cache_method
 from django.utils.functional import cached_property
+from django.apps import apps
 
 class User(AbstractUser):   
     """Модель Пользователя, имеет базовые методы"""
@@ -43,7 +43,6 @@ class User(AbstractUser):
         self.password = raw_password
         self.save
 
-    @cache_method
     def get_user_api(self):
         """Получение последнего апи ключа пользователя"""
         from Api_Keys.models import Api_key
@@ -234,7 +233,6 @@ class UserGroup(models.Model):
         return ",".join(value)
     
     @staticmethod
-    @cache_method
     def get_user_groups__id(user):
         """Возвращает список Айдишников групп пользователя"""
 
@@ -249,7 +247,6 @@ class UserGroup(models.Model):
         return return_list
     
     @staticmethod
-    @cache_method
     def get_user_groups__list(user):
         """Возвращает список Групп групп пользователя"""
 
