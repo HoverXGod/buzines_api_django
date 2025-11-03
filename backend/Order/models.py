@@ -1,6 +1,7 @@
 from django.db import models
 from Payment.models import Payment
 from User.models import User
+from django.utils.functional import cached_property
 
 class SalesChannel(models.Model):
     name = models.CharField(max_length=32)
@@ -12,18 +13,6 @@ class SalesChannel(models.Model):
 
     def __str__(self):
         return f"{self.name}"
-
-    @staticmethod
-    def check_base_chanell():
-        try: chanell = SalesChannel.objects.get(id = 1)
-        except: return SalesChannel.objects.create(
-            name="online",
-            description="""Канал онлайн продаж. Продажы происходят из интернет магазина""")
-        
-        if chanell.name != "online": 
-            chanell.name = "online"
-            chanell.save()
-
 
 class Order(models.Model):
     """Модель заказа с привязкой к платежу"""
@@ -59,22 +48,21 @@ class Order(models.Model):
     def __str__(self): 
         return f"id:{self.id}"
 
+    @cached_property
     @property
     def total(self): return self.payment.cost
-
 
     @staticmethod
     def create__order(request, promo, method_name):
         """Создание заказа, dilivery это статус доставки если она есть"""
 
         from Product.models import Cart
-        SalesChannel.check_base_chanell()
 
-        products = Cart.get_user_cart(request.user)
+        products = Cart.get_user_cart(user_id=request.user.id)
 
         user = request.user
 
-        data = Cart.calculate_total(user=user, promo_code=promo)
+        data = Cart.calculate_total(user_id=user.id, promo_code=promo)
 
         price_with_discount = data[0]
         product_dict = data[1]
@@ -94,7 +82,7 @@ class Order(models.Model):
         Order.objects.create(
             user = user,
             payment = payment,
-            products = Cart.get_user_cart_id(user=user).split(','),
+            products = Cart.get_user_cart_id(user_id=user.id).split(','),
             delivery = "",
             chanell = SalesChannel.objects.get(id=1)
         )
@@ -165,7 +153,8 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f" {self.product.name} * {self.quanity}"
-    
+
+    @cached_property
     @property
     def date(self):
         return self.order.date

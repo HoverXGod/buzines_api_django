@@ -158,7 +158,7 @@ class AddImageProduct(APIView):
     serializer_class = ProductSerializer
 
     def get(self, request):
-        return SecureResponse(request=request)
+        return SecureResponse(request=request) # TODO: Доделать
 
 class CreateCategory(APIView): 
     
@@ -208,7 +208,7 @@ class GetAllCategorys(APIView):
     permission_classes = []
     serializer_class = CategorySerializer
 
-
+    @method_decorator(cache_api_view(use_models=[Category]))
     def get(self, request):
         try:
             return SecureResponse(
@@ -360,7 +360,7 @@ class AddProductInCart(APIView):
                     ).data,
                 status=200
                 )
-        except: 
+        except:
             return SecureResponse(request=request, status=400)
 
 class GetAllPromotions(APIView):
@@ -368,6 +368,7 @@ class GetAllPromotions(APIView):
     permission_classes = [isAutorized]
     serializer_class = PromotionSerializer
 
+    @method_decorator(cache_api_view(use_models=[Promotion]))
     def get(self, request):
 
         try:
@@ -387,6 +388,7 @@ class GetPersonalDiscount(APIView):
     permission_classes = [isAutorized]
     serializer_classes = [PersonalDiscountSerializer, GroupPromotionSerializer]
 
+    @method_decorator(cache_api_view(use_models=[PersonalDiscount, GroupPromotion]))
     def get(self, request):
 
         try:
@@ -394,11 +396,11 @@ class GetPersonalDiscount(APIView):
                 request=request, 
                 data={
                     "Personal": self.serializer_classes[0](
-                        instance=PersonalDiscount.get_user_personal_discount(request.user),
+                        instance=PersonalDiscount.get_user_personal_discount(request.user.id),
                         many=True
                         ).data,
                     "Group": self.serializer_classes[1](
-                        instance=GroupPromotion.get_user_personal_discount(request.user),
+                        instance=GroupPromotion.get_user_personal_discount(request.user.id),
                         many=True
                         ).data},
                 status=200
@@ -411,6 +413,7 @@ class GetUserCart(APIView):
     permission_classes = [isAutorized]
     serializer_class = UserCartSerializer
 
+    @method_decorator(cache_api_view(use_models=[Cart]))
     def get(self, request):
 
         try:
@@ -431,6 +434,7 @@ class GetPromocode(APIView):
     permission_classes = [isAutorized]
     serializer_class = PromoCodeSerializer
 
+    @method_decorator(cache_api_view(use_models=[Promocode]))
     def get(self, request):
 
         try:
@@ -553,13 +557,14 @@ class GetCartCost(APIView):
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
+    @method_decorator(cache_api_view(use_models=[Cart]))
     def get(self, request):
 
         try:
             return SecureResponse(
                 request=request, 
                 data={
-                    "cost": Cart.calculate_base_cost(request.user)
+                    "cost": Cart.calculate_base_cost(request.user.id)
                 },
                 status=200
                 )
@@ -571,6 +576,7 @@ class GetCartDiscount(APIView):
     permission_classes = [isAutorized]
     serializer_class = CartSerializer
 
+    @method_decorator(cache_api_view(use_models=[Cart]))
     def get(self, request):
 
         try:

@@ -4,12 +4,15 @@ from BaseSecurity.services import SecureResponse
 from .serializers import *
 from .models import *
 from User.models import User
+from core.cache import cache_api_view
+from django.utils.decorators import method_decorator
 
 class GetAllOrders(APIView): 
     
     permission_classes = [isSuperUser]
     serializer_class = OrderSerializer
 
+    @method_decorator(cache_api_view(use_models=[Order]))
     def get(self, request):
 
         try:    
@@ -29,6 +32,7 @@ class GetUserOrders(APIView):
     permission_classes = [isSuperUser]
     serializer_class = OrderSerializer
 
+    @method_decorator(cache_api_view(use_models=[Order]))
     def get(self, request):
 
         try:    
@@ -48,6 +52,7 @@ class GetMyOrders(APIView):
     permission_classes = [isAutorized]
     serializer_class = OrderSerializer
 
+    @method_decorator(cache_api_view(use_models=[Order]))
     def get(self, request):
 
         try:    
@@ -69,39 +74,41 @@ class StartOrder(APIView):
 
     def get(self, request):
 
-        # try:    
-        #     return SecureResponse(
-        #         request=request,
-        #         data=self.serializer_class(
-        #             instance=Order.create__order(
-        #                 request=request,
-        #                 promo=request.GET['promocode'],
-        #                 method_name=request.GET['method_name'],
-        #                 ),
-        #             ).data,
-        #         status=200
-        #         )
-        # except: 
-        # try:    
-        return SecureResponse(
-            request=request,
-            data=self.serializer_class(
-                instance=Order.create__order(
-                    request=request,
-                    promo="",
-                    method_name=request.GET['method_name'],
-                    ),
-                ).data,
-            status=200
-            )
-        # except:
-        #     return SecureResponse(request=request, status=400)
+        try:
+            return SecureResponse(
+                request=request,
+                data=self.serializer_class(
+                    instance=Order.create__order(
+                        request=request,
+                        promo=request.GET['promocode'],
+                        method_name=request.GET['method_name'],
+                        ),
+                    ).data,
+                status=200
+                )
+        except:
+
+            return SecureResponse(
+                request=request,
+                data=self.serializer_class(
+                    instance=Order.create__order(
+                        request=request,
+                        promo="",
+                        method_name=request.GET['method_name'],
+                        ),
+                    ).data,
+                status=200
+                )
+            # except Exception as e:
+            #     print(str(e))
+            #     return SecureResponse(request=request, status=400)
             
 class GetOrder(APIView): 
     
     permission_classes = [isSuperUser]
     serializer_class = OrderSerializer
 
+    @method_decorator(cache_api_view(use_models=[Order]))
     def get(self, request):
 
         try:    

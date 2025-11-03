@@ -1,11 +1,10 @@
 from django.db import models
 from django.http import HttpRequest
-from User.models import User
 
 class AuditLog(models.Model):
     """Модель аудита, нужен для отладки и проверки пользователей"""
 
-    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, related_name='visits')
+    user = models.ForeignKey('User.User', on_delete=models.SET_NULL, null=True, related_name='visits')
     action = models.CharField(max_length=255)
     timestamp = models.DateTimeField(auto_now_add=True)
     details = models.JSONField()
@@ -24,7 +23,7 @@ class AuditLog(models.Model):
         super().save()
 
     @staticmethod
-    def _write_audit(request: HttpRequest, action: str, error: str = None):
+    def _write_audit(request: HttpRequest, action: str):
         """Записываем аудит в базу данных"""
 
         user = request.user
@@ -45,20 +44,31 @@ class AuditLog(models.Model):
             "COOKIES": COOKIES,
             "GET": GET,
             "POST": POST,
-            "ERROR": error
         }
 
         if request.user.is_anonymous: 
 
-            audit = AuditLog(
+            AuditLog(
                 action=action,
                 details=details,
             ).save()
         else: 
-            audit = AuditLog(
+            AuditLog(
                 user=user,
                 action=action,
                 details=details,
             ).save()
 
         return AuditLog.objects.last()
+
+class ExceptionManager(models.Model):
+    exception_string = models.CharField(max_length=2048)
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ошибка'  # Имя модели в единственном числе
+        verbose_name_plural = 'Ошибки'  # Имя модели во множественном числе
+
+    @staticmethod
+    def register_exception(error: Exception) -> None:
+        ExceptionManager(exception_string = str(error)).save()

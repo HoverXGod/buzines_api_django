@@ -3,6 +3,7 @@ from User.models import User
 from datetime import datetime
 from .services import ImagesManager
 from Product.models import Product
+from core.cache import cache_method
 
 class Post(models.Model):
     """Модель поста, имеющая базовые методы, ключ привязан к пользователю"""
@@ -72,6 +73,7 @@ class PageText(models.Model):
         verbose_name = 'Текст страницы'  # Имя модели в единственном числе
         verbose_name_plural = 'Тексты страниц'  # Имя модели во множественном числе
 
+    @cache_method(use_models=['Content.PageText'])
     @staticmethod
     def get_page_texts(page_name): 
         """Возвращает текст станицы по индексу"""
@@ -136,6 +138,7 @@ class PageColor(models.Model):
     index = models.IntegerField()
     page_name = models.CharField(max_length=64)
     color = models.CharField(max_length=12)
+
     class Meta:
         verbose_name = 'Цвет на странице'  # Имя модели в единственном числе
         verbose_name_plural = 'Цвета на страницах'  # Имя модели во множественном числе
@@ -144,6 +147,7 @@ class Buttons(models.Model):
     index = models.IntegerField()
     template_id = models.IntegerField()
     action = models.CharField(max_length=64)
+
     class Meta:
         verbose_name = 'Кнопка на странице'  # Имя модели в единственном числе
         verbose_name_plural = 'Кнопки на страницах'  # Имя модели во множественном числе

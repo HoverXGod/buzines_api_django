@@ -4,7 +4,7 @@ from BaseSecurity.services import SecureResponse
 from Content.serializers import PageTextSerializers
 from Content.models import PageText
 from Content.services import ImagesManager
-from django.views.decorators.cache import cache_page
+from core.cache import cache_api_view
 from django.utils.decorators import method_decorator
 
 class CreatePageText(APIView): 
@@ -43,7 +43,7 @@ class GetPageTexts(APIView):
     serializer_class = PageTextSerializers    
     permission_classes = [isSuperUser]
 
-    @method_decorator(cache_page(60*60*18))
+    @method_decorator(cache_api_view(use_models=[PageText]))
     def get(self, request): 
         page_name = request.GET['page_name']
         

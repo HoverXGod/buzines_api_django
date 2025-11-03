@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import AuditLog
+from .models import AuditLog, ExceptionManager
 from admin import BaseAdmin
 from django.utils.html import format_html
 import json
@@ -73,3 +73,28 @@ class AuditLogAdmin(BaseAdmin):
             401: 'Ошибка',
             302: 'Предупреждение',
         }.get(status, 'Неизвестно')
+
+
+@admin.register(ExceptionManager)
+class ExceptionManagerAdmin(admin.ModelAdmin):
+    list_display = ('id', 'short_error', 'timestamp')
+    list_filter = ('timestamp',)
+    search_fields = ('exception_string',)
+    readonly_fields = ('timestamp',)
+    ordering = ('-timestamp',)
+
+    def short_error(self, obj):
+        return obj.exception_string[:100] + '...' if len(obj.exception_string) > 100 else obj.exception_string
+
+    short_error.short_description = 'Ошибка'
+    def actions_short(self, obj):
+        """Быстрые действия"""
+        return format_html(
+            '<a href="/admin/{}/{}/{}/change/">Просмотр</a>'.format(
+                obj._meta.app_label,
+                obj._meta.model_name,
+                obj.id
+            )
+        )
+
+    actions_short.short_description = 'Действия'

@@ -11,6 +11,14 @@ def get_cache_used_models() -> list:
     return [] if result is None else result
 
 def conf_used_cache_models(cache_key_method, use_models: list):
+    resolved_models = []
+    for model in use_models:
+        if isinstance(model, str):
+            resolved_models.append(apps.get_model(model))
+        else:
+            resolved_models.append(model)
+    use_models = resolved_models
+
     cache_key = "use_cache_models_disability"
     timeout = 60*60*24
     result = [item._meta.model_name for item in use_models]
@@ -34,7 +42,14 @@ def conf_used_cache_models(cache_key_method, use_models: list):
     cache.set("caches_list", list_caches, timeout)
 
 @receiver(post_save, sender="User.User")
+@receiver(post_save, sender="Api_Keys.Api_key")
+@receiver(post_save, sender="Content.Post")
+@receiver(post_save, sender="Content.PageText")
+@receiver(post_save, sender="Order.Order")
 @receiver(post_save, sender="Product.Product")
+@receiver(post_save, sender="Product.Category")
+@receiver(post_save, sender="Product.UserSubscriptionItem")
+@receiver(post_save, sender="User.UserGroup")
 def core_cache(sender, instance, **kwargs):
     cache_key = "use_cache_models_disability"
     timeout = 60 * 60 * 24

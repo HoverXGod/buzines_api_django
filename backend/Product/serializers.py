@@ -92,10 +92,19 @@ class SubscriptionSerializer(serializers.ModelSerializer):
 
 class UserSubscriptionSerializer(serializers.ModelSerializer):
 
+    product = ProductSerializer
+
+    class Meta:
+        model = Subscription
+        depth = 2
+        fields = ['id', 'product', 'is_active', 'duration_days', 'description']
+
+class UserSubscriptionItemSerializer(serializers.ModelSerializer):
+
     subscription = SubscriptionSerializer
     user = UserSerializer
 
     class Meta:
-        model = UserSerializer
+        model = UserSubscriptionItem
         depth = 2
-        fields = ['id', 'user', 'subscription', 'started_at']
+        fields = ['id', 'user', 'subscription', 'started_at', 'Order__id']

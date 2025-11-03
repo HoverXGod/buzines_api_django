@@ -4,7 +4,7 @@ from BaseSecurity.services import SecureResponse
 from .serializers import PostSerializer
 from User.serializers import AuthorSerializer
 from .models import Post
-from django.views.decorators.cache import cache_page
+from core.cache import cache_api_view
 from django.utils.decorators import method_decorator
 
 class GetAuthorPost(APIView): 
@@ -12,7 +12,7 @@ class GetAuthorPost(APIView):
     serializer_class = AuthorSerializer
     permission_classes = []
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Post]))
     def get(self, request):
         post_id = request.GET['post_id']
         
@@ -28,7 +28,7 @@ class GetPost(APIView):
     serializer_class = PostSerializer
     permission_classes = []
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Post]))
     def get(self, request):
         post_id = request.GET['post_id']
 
@@ -84,7 +84,7 @@ class GetPosts(APIView):
     
     serializer_class = PostSerializer
 
-    @method_decorator(cache_page(60 * 60 * 18))
+    @method_decorator(cache_api_view(use_models=[Post]))
     def get(self, request):
         posts = Post.objects.all()
 
@@ -120,4 +120,4 @@ class DeletePost(APIView):
 
         post.del_post()
 
-        return SecureResponse(request=request, data=self.serializer_class(instance=post).data, status=200)
+        return SecureResponse(request=request, data=self.serializer_class(instance=bufer_post).data, status=200)

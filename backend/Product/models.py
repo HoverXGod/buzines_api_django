@@ -3,6 +3,8 @@ from django.db import models
 from django.db.models import Max
 from User.models import User, UserGroup
 from django.utils.functional import cached_property
+from core.cache import cache_method
+from django.apps import apps
 
 class Category(models.Model):
     """Модель категори к которой относятся товары"""
@@ -188,21 +190,22 @@ class Cart(models.Model):
         verbose_name = 'Коризна'  # Имя модели в единственном числе
         verbose_name_plural = 'Корзины'  # Имя модели во множественном числе
 
-
+    @cache_method(use_models=['Product.Cart'])
     @staticmethod
-    def get_user_cart(user):
+    def get_user_cart(user_id):
         """Возвращает полный перечень товаров пользователя"""
 
         try: 
-             return Cart.objects.filter(user=user)
+             return Cart.objects.filter(user_id=user_id)
         except: return None
 
+    @cache_method(use_models=['Product.Cart'])
     @staticmethod
-    def get_user_cart_id(user) -> str:
+    def get_user_cart_id(user_id) -> str:
         """Возвращает полный перечень товаров пользователя в виде их id через запятую"""
 
         try: 
-            cart = Cart.objects.filter(user=user)
+            cart = Cart.objects.filter(user_id=user_id)
         except: return None
 
         from .serializers import UserCartSerializer
@@ -222,6 +225,7 @@ class Cart(models.Model):
         Cart(product=product, user=user, quanity=quanity).save()
         return Cart.objects.last()
 
+    @cache_method(use_models=['Product.Cart'])
     @staticmethod
     def get_all_cart__product(product):
         """Возвращает полный перечень пользователей с этим товаром в корзине"""
@@ -236,8 +240,9 @@ class Cart(models.Model):
         
         Cart.objects.filter(user=user).delete()
         return True
-    
 
+    @cache_method(use_models=['Product.Cart',
+                           'Product.Product'])
     @staticmethod
     def calculate_base_cost(user_id):
 
@@ -264,10 +269,16 @@ class Cart(models.Model):
 
         return original_total
 
+    @cache_method(use_models=['Product.Cart',
+                               'Product.Product',
+                               'Product.PersonalDiscount',
+                               'Product.Promotion',
+                               'Product.GroupPromotion',
+                               'Product.Promocode'])
     @staticmethod
-    def calculate_total(user, promo_code=None):
+    def calculate_total(user_id, promo_code=None):
 
-        # user = User.objects.get(id=user_id)
+        user = User.objects.get(id=user_id)
         
         cart_items = Cart.objects.filter(user=user).select_related('product')
 
@@ -292,10 +303,6 @@ class Cart(models.Model):
             product_id__in=product_ids,
             on_start=True
         ).values('product_id', 'name').annotate(max_discount=Max('discount')) or []
-
-        promo_dict = list()
-        personal_dict = list()
-        group_dict = list()
 
         # Создаем словари для быстрого доступа
         promo_dict = {pd['product_id']: {"discount": pd['max_discount'], "promotion": pd['name']} for pd in promo_discounts}
@@ -442,6 +449,7 @@ class Promotion(models.Model):
     @property
     def started(self): return self.on_start
 
+    @cached_property
     @property
     def created(self): return self.start_date
 
@@ -456,7 +464,8 @@ class Promotion(models.Model):
 
         self.delete()
         return True
-    
+
+    @cache_method(use_models=['Product.Promotion'])
     @staticmethod
     def get_all_promotions():
         """Получение всех активных акций"""
@@ -484,6 +493,7 @@ class PersonalDiscount(models.Model):
         verbose_name = 'Персональная скидка'  # Имя модели в единственном числе
         verbose_name_plural = 'Персональные скидки'  # Имя модели во множественном числе
 
+    @cached_property
     @property
     def created(self): return self.start_date
 
@@ -513,9 +523,9 @@ class PersonalDiscount(models.Model):
 
         self.delete()
         return True
-    
+    @cache_method(use_models=['Product.PersonalDiscount'])
     @staticmethod
-    def get_user_personal_discount(user):
+    def get_user_personal_discount(user_id):
         """Получение всех индвидуальных предложенй пользователя"""
         
         return PersonalDiscount.objects.filter(user=user, on_start=True)
@@ -537,13 +547,13 @@ class Promocode(models.Model):
             code=code,
             discount=discount
         ).save()
-
+    @cache_method(use_models=['Product.Promocode'])
     @staticmethod
-    def get_promo(code): 
+    def get_promo(code: str):
         """Получение промокода по коду"""
 
         try: return Promocode.objects.get(code=code).discount
-        except: return -99
+        except: return 0
 
     def del_promo(self): 
         """Удаление промокода"""
@@ -572,9 +582,11 @@ class GroupPromotion(models.Model):
         verbose_name = 'Акция для группы'  # Имя модели в единственном числе
         verbose_name_plural = 'Акции для групп'  # Имя модели во множественном числе
 
+    @cached_property
     @property
     def created(self): return self.start_date
 
+    @cache_method(use_models=['Product.GroupPromotion', 'User.UserGroup'])
     @staticmethod
     def get_user_personal_discount(user):
         """Возвращает акции пользовательской группы"""
@@ -624,6 +636,7 @@ class UserSubscriptionItem(models.Model):
                 sub.save()
         except: pass
 
+    @cached_property
     @property
     def end_date(self):
         """Возвращает дату окончания подписки"""
@@ -631,8 +644,8 @@ class UserSubscriptionItem(models.Model):
             return self.startet_at + timedelta(days=self.subscription.duration_days)
         return None
 
-    @property
     @cached_property
+    @property
     def is_active(self) -> bool:
         if self.end_date:
             if timezone.now().date() <= self.end_date:

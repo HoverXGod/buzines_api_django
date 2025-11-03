@@ -7,7 +7,10 @@ from Api_Keys.models import Api_key
 from .models import User, UserGroup
 from Analytics.models import CustomerLifetimeValue, CustomerBehavior
 from django.core.management import call_command
-from Product.serializers import UserSubscriptionSerializer
+from Product.serializers import UserSubscriptionItemSerializer
+from Product.models import UserSubscriptionItem
+from core.cache import cache_api_view
+from django.utils.decorators import method_decorator
 
 from drf_spectacular.settings import spectacular_settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -100,6 +103,7 @@ class MyProfile(APIView):
     serializer_classes = [UserSerializer, ApiKeySerializer, UserGroupSerializer]
     permission_classes = [isAutorized]
 
+    @method_decorator(cache_api_view(use_models=[User]))
     def get(self, request):
         user = request.user
 
@@ -119,6 +123,7 @@ class UserProfile(APIView):
     serializer_classes = [UserSerializer, ApiKeySerializer, UserGroupSerializer]
     permission_classes = [isSuperUser]
 
+    @method_decorator(cache_api_view(use_models=[User]))
     def get(self, request):
         user_id = request.GET['user_id']
         
@@ -234,6 +239,7 @@ class MyGroups(APIView):
     serializer_class = UserGroupSerializer
     permission_classes = [isAutorized]
 
+    @method_decorator(cache_api_view(use_models=[UserGroup]))
     def get(self, request):
         user = request.user
 
@@ -250,9 +256,9 @@ class UserGroups(APIView):
     serializer_class = UserGroupSerializer
     permission_classes = [isSuperUser]
 
+    @method_decorator(cache_api_view(use_models=[UserGroup]))
     def get(self, request):
         user_id = request.GET['user_id']
-        user = None
         
         try: user = User.objects.get(id=user_id)
         except: return SecureResponse(request=request, status=400)
@@ -269,9 +275,10 @@ class UserGroups(APIView):
     
 class MySubsctiptions(APIView):
 
-    serializer_class = [UserSubscriptionSerializer]
+    serializer_class = [UserSubscriptionItemSerializer]
     permission_classes = [isAutorized]
 
+    @method_decorator(cache_api_view(use_models=[UserSubscriptionItem]))
     def get(self, request):
         try: 
             return SecureResponse(
