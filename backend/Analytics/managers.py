@@ -6,6 +6,7 @@ from django.core.exceptions import ObjectDoesNotExist
 from Order.models import OrderItem
 from Payment.models import Payment
 from decimal import Decimal
+from .tasks import *
 
 class CustomerLifetimeValueManager(models.Manager):
 
@@ -57,9 +58,10 @@ class CustomerLifetimeValueManager(models.Manager):
 
     def create_clv(self, user):
         """Автоматически создает запись CLV с вычисленными значениями"""
+
         if self.filter(user=user).exists():
-            raise ValueError("CLV record for this user already exists.")
-        
+            return
+
         clv_data = self._calculate_clv_data(user)
         return self.create(
             user=user,
@@ -68,16 +70,9 @@ class CustomerLifetimeValueManager(models.Manager):
 
     def update_clv(self, user):
         """Обновляет существующую запись CLV новыми вычисленными значениями"""
-        try:
-            clv = self.get(user=user)
-        except ObjectDoesNotExist:
-            raise ValueError("CLV record for this user does not exist.")
-        
-        clv_data = self._calculate_clv_data(user)
-        for field, value in clv_data.items():
-            setattr(clv, field, value)
-        clv.save()
-        return clv
+
+        task = lv_update.delay(user.id)
+        return task.result
 
 class SalesFunnelManager(models.Manager):
     """Кастомный менеджер для работы с воронкой продаж"""
@@ -110,19 +105,8 @@ class SalesFunnelManager(models.Manager):
         """
         Обновление существующей записи
         """
-        allowed_fields = {'stage', 'session_data', 'device_type', 'order_item'}
-        try:
-            entry = self.get(id=entry_id)
-            for field, value in kwargs.items():
-                if field in allowed_fields:
-                    setattr(entry, field, value)
-            entry.full_clean()
-            entry.save()
-            return entry
-        except self.model.DoesNotExist:
-            return None
-        except Exception as e:
-            raise ValueError(f"Error updating entry: {str(e)}")
+        task = sf_update.delay(entry_id, **kwargs)
+        return task.result
 
     def get_entries(self, user=None, product=None, category=None, 
                   stage=None, days_back=30, limit=100):
@@ -169,27 +153,8 @@ class PerformanceManager(models.Manager):
 
     def update_entry(self, instance, **kwargs):
         """Обновление записи с перерасчетом метрик"""
-        force_recalculate = False
-        
-        # Если изменились продукт или дата - требуется полный перерасчет
-        if 'product' in kwargs or 'date' in kwargs:
-            force_recalculate = True
-            if 'product' in kwargs:
-                instance.product = kwargs.pop('product')
-                instance.category = instance.product.category
-            if 'date' in kwargs:
-                instance.date = kwargs.pop('date')
-        
-        # Обновление полей
-        for attr, value in kwargs.items():
-            setattr(instance, attr, value)
-        
-        # Перерасчет метрик при необходимости
-        if force_recalculate or any(field in kwargs for field in ['metrics', 'total_units_sold']):
-            self._recalculate_metrics(instance)
-        
-        instance.save()
-        return instance
+        task = pp_update.delay(instance.id, **kwargs)
+        return task.result
 
     def _calculate_initial_metrics(self, product, date, data):
         """Расчет начальных метрик при создании записи"""
@@ -239,29 +204,8 @@ class CohortAnalysisManager(models.Manager):
     def add_entry(self):
         """Автоматически создает запись когорты на основе вчерашних данных"""
         # Определяем даты
-        today = timezone.now().date()
-        cohort_date = today - timezone.timedelta(days=31)
-        retention_day = (today - cohort_date).days
-        
-        # Определяем основную категорию
-        primary_category = self._get_primary_category(cohort_date, retention_day)
-        
-        # Создаем или обновляем запись
-        cohort, created = self.get_or_create(
-            cohort_date=cohort_date,
-            retention_day=retention_day,
-            primary_category=primary_category,
-            defaults={'metrics': {}}
-        )
-        
-        # Обновляем метрики
-        try:
-            metrics = self._calculate_metrics(cohort_date, retention_day, primary_category)
-            if cohort.metrics != metrics:
-                cohort.metrics = metrics
-                cohort.save(update_fields=['metrics'])
-        except: pass
-        return cohort
+        task = cohort_analysis.delay()
+        return task.result
 
     def _get_primary_category(self, cohort_date, retention_day):
         """Определяет основную категорию по заказам за указанную дату"""
@@ -323,36 +267,8 @@ class CohortAnalysisManager(models.Manager):
 class PaymentAnalysisManager(models.Manager):
     def add_entry(self, payment):
         """Автоматически создает и заполняет анализ платежа"""
-        # Проверка статуса платежа
-        if payment.is_payment:
-            return None  # Анализ только для успешных платежей
-
-        # Вычисляем показатели
-        gateway_perf = self._calculate_gateway_performance(payment)
-        fraud_indicators = self._detect_fraud_indicators(payment)
-        risk_score = self._calculate_risk_score(fraud_indicators, payment)
-        chargeback_prob = self._predict_chargeback(payment, risk_score)
-
-        # Создаем или обновляем запись
-        analysis, created = self.get_or_create(
-            payment=payment,
-            defaults={
-                'gateway_performance': gateway_perf,
-                'fraud_indicators': fraud_indicators,
-                'risk_score': risk_score,
-                'chargeback_probability': chargeback_prob
-            }
-        )
-        
-        # Обновление существующей записи
-        if not created:
-            analysis.gateway_performance = gateway_perf
-            analysis.fraud_indicators = fraud_indicators
-            analysis.risk_score = risk_score
-            analysis.chargeback_probability = chargeback_prob
-            analysis.save()
-
-        return analysis
+        task = payment_analysis.delay(payment_id)
+        return task.result
 
     def _calculate_gateway_performance(self, payment):
         """Время обработки платежного шлюза"""
@@ -533,44 +449,7 @@ class OrderAnalyticsManager(models.Manager):
 
 class InventoryTurnoverManager(models.Manager):
     def add_entry(self, product):
-        today = timezone.now().date()
-        period_start = today.replace(day=1)
-        
-        # Рассчитываем конец периода
-        if period_start.month == 12:
-            next_month = period_start.replace(year=period_start.year+1, month=1)
-        else:
-            next_month = period_start.replace(month=period_start.month+1)
-        period_end = next_month - timedelta(days=1)
-
-        # Проверка существующей записи
-        if self.filter(product=product, period_start=period_start).exists():
-            return
-
-        # Получаем общее количество продаж за период
-        total_sold = (
-            product.orders.filter(
-                order__date__gte=period_start,
-                order__date__lte=period_end
-            ).aggregate(total=Sum('quanity'))['total'] or 0
-        )
-
-        # Рассчитываем дни отсутствия товара
-        stockout_days = self.calculate_stockout_days(product, period_start, period_end)
-
-        # Расчет оборачиваемости
-        avg_stock = self.calculate_avg_stock(product, period_start, period_end)
-        stock_turnover = total_sold / avg_stock if avg_stock > 0 else 0
-
-        self.create(
-            product=product,
-            category=product.category,
-            period_start=period_start,
-            period_end=period_end,
-            stock_turnover=round(stock_turnover, 2),
-            stockout_days=stockout_days,
-            demand_forecast=total_sold
-        )
+        inventory_analysis.delay(product.id)
     
     @staticmethod
     def calculate_avg_stock(product, start, end):
@@ -638,28 +517,8 @@ class OrderItemAnalyticsManager(models.Manager):
         """
         Создает аналитическую запись с автоматическим расчетом показателей
         """
-        # Базовые расчеты
-        cost_price = order_item.product.cost_price
-        price = order_item.product.price
-        margin = price - cost_price
-        
-        # Расчет комплексных показателей
-        profitability_index = (margin / cost_price * 100) if cost_price > 0 else 0
-        
-        # Расчет времени доставки (пример реализации)
-        delivery_time = self._calculate_delivery_time(order_item)
-        
-        # Определение сопутствующих товаров
-        cross_sell_products = self._find_cross_sell_products(order_item)
-        
-        # Создание объекта
-        return self.create(
-            order_item=order_item,
-            margin=margin,
-            profitability_index=profitability_index,
-            delivery_time=delivery_time,
-            **extra_fields
-        ).cross_sell_products.add(*cross_sell_products)
+        task = order_item_analysis
+        return task.result
     
     def _calculate_delivery_time(self, order_item):
         """Рассчитывает время доставки в днях"""
@@ -687,4 +546,3 @@ class OrderItemAnalyticsManager(models.Manager):
         ).order_by('-total')[:3]
         
         return [item['product'] for item in cross_sell]
-

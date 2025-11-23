@@ -112,8 +112,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
 
-    'BaseSecurity.middlewares.AuthenticationMiddleware',
+    'User.middlewares.AuthenticationMiddleware',
     'BaseSecurity.middlewares.AuditLogMiddleware',
+    'BaseSecurity.middlewares.ErrorLogingMiddleware',
     'django_user_agents.middleware.UserAgentMiddleware',
 ]
 

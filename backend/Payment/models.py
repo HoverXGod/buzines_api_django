@@ -45,11 +45,11 @@ class Payment(models.Model):
     def is_payment(self) -> bool: return True if self.status == "completed" else False
 
     @staticmethod
-    def create__payment(method_name, cost, request, products, discount, user):
+    def create__payment(method_name, cost, products, discount, user):
         """Создание платежа"""
 
         method = get_method(method_name)
-        method.create_payment(products, cost, discount, request)
+        method.create_payment(products, cost, discount)
         
         this_payment = Payment(
             user = user,

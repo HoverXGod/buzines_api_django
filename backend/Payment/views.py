@@ -30,7 +30,7 @@ class CheckStatus(APIView):
 
     def get(self, request):
         try:
-            task = check_payment_status(
+            task = check_payment_status.delay(
                 cls=Payment.objects.get(id=request.GET['payment_id'])
             )
 

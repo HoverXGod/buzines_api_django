@@ -4,6 +4,7 @@ from django.core.cache import cache
 
 def get_cache_key(func, *args, **kwargs):
     cache_key = f"{func.__name__}:{args}:{tuple(sorted(kwargs.items()))}"
+    return cache_key
 
 def get_cache_used_models() -> list:
     cache_key = "use_cache_models_disability"

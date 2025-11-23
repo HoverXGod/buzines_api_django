@@ -53,14 +53,14 @@ class Order(models.Model):
     def total(self): return self.payment.cost
 
     @staticmethod
-    def create__order(request, promo, method_name):
+    def create__order(user_id, promo, method_name):
         """Создание заказа, dilivery это статус доставки если она есть"""
 
         from Product.models import Cart
 
-        products = Cart.get_user_cart(user_id=request.user.id)
+        products = Cart.get_user_cart(user_id=user_id)
 
-        user = request.user
+        user = User.objects.get(id=user_id)
 
         data = Cart.calculate_total(user_id=user.id, promo_code=promo)
 
@@ -73,7 +73,6 @@ class Order(models.Model):
         payment = Payment.create__payment(
                 method_name,
                 cost,
-                request,
                 products,
                 discount,
                 user

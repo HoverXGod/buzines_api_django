@@ -6,6 +6,8 @@ from .models import *
 from User.models import User
 from core.cache import cache_api_view
 from django.utils.decorators import method_decorator
+from BaseSecurity.models import ExceptionManager
+from .tasks import create_order_task
 
 class GetAllOrders(APIView): 
     
@@ -75,33 +77,41 @@ class StartOrder(APIView):
     def get(self, request):
 
         try:
-            return SecureResponse(
-                request=request,
-                data=self.serializer_class(
-                    instance=Order.create__order(
-                        request=request,
-                        promo=request.GET['promocode'],
-                        method_name=request.GET['method_name'],
-                        ),
-                    ).data,
-                status=200
-                )
-        except:
+            task = create_order_task.delay(
+                user_id=request.user.id,
+                promo="",
+                method_name=request.GET['method_name'],
+            )
+            if task.ready():
+                task_data = task.result
+            else:
+                task_data = None
 
             return SecureResponse(
                 request=request,
-                data=self.serializer_class(
-                    instance=Order.create__order(
-                        request=request,
-                        promo="",
-                        method_name=request.GET['method_name'],
-                        ),
-                    ).data,
+                data=self.serializer_class(task_data).data,
                 status=200
                 )
-            # except Exception as e:
-            #     print(str(e))
-            #     return SecureResponse(request=request, status=400)
+        except:
+            try:
+                task = create_order_task.delay(
+                            user_id=request.user.id,
+                            promo="",
+                            method_name=request.GET['method_name'],
+                            )
+                if task.ready():
+                   task_data = task.result
+                else:
+                    task_data = None
+
+                return SecureResponse(
+                    request=request,
+                    data=self.serializer_class(task_data).data,
+                    status=200
+                    )
+            except Exception as e:
+                ExceptionManager.register_exception(e)
+                return SecureResponse(request=request, status=400)
             
 class GetOrder(APIView): 
     
