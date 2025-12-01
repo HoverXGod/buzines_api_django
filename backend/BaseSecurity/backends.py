@@ -5,7 +5,9 @@ from User.models import User
 class AuthenticateLogin(BaseBackend):
     def authenticate(self, request, username=None, password=None):
 
-        token, _ = User.login_user_by_password(request, login=username, password=password)
+        try:
+            token, _ = User.login_user_by_password(request, login=username, password=password)
+        except:  return None
 
         return JWT_auth.jwt_to_user(token) if not token == None else None
     
@@ -24,7 +26,7 @@ class AuthenticateToken(BaseBackend):
         try: return JWT_auth.jwt_to_user(jwt_token=token)
         except:
             try: return JWT_auth.jwt_to_user(jwt_token=JWT_auth.get_jwt(request=request))
-            except: pass
+            except: return None
         
     def get_user(self, user_id):
         try:

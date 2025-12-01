@@ -6,3 +6,6 @@ class PaymentConfig(AppConfig):
     name = 'Payment'
     verbose_name = "Менеджер Платежей"
     ordering = ['BaseSecurity', 'Product']
+
+    def ready(self) -> None: return None
+

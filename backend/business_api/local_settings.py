@@ -12,7 +12,6 @@ INTERNAL_IPS = [
     
 ]
 
-
 def get_local_db(BASE_DIR):
     return {
                 'default': {

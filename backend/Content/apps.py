@@ -6,3 +6,6 @@ class ContentConfig(AppConfig):
     name = 'Content'
     verbose_name = 'Менеджер Контента'
     ordering = ['BaseSecurity', 'User']
+
+    def ready(self) -> None: return None
+

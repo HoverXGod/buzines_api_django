@@ -6,3 +6,6 @@ class CrmConfig(AppConfig):
     name = 'CRM'
     verbose_name = 'CRM Application'
     ordering = ['BaseSecurity', 'Content']
+
+    def ready(self) -> None: return None
+

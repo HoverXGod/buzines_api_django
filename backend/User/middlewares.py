@@ -1,11 +1,20 @@
 from BaseSecurity.services import SessionManager
 from django.contrib.auth.models import AnonymousUser
 from django.utils.deprecation import MiddlewareMixin
+from BaseSecurity.utils import JWT_auth
+from .models import User
+
 class AuthenticationMiddleware(MiddlewareMixin):
     def __init__(self, get_response=None):
         self.get_response = get_response
 
     def __call__(self, request):
+        if hasattr(request, 'session'):
+            try:
+                request.user = User.objects.get(pk=request.session['_auth_user_id'])
+                return self.get_response(request)
+            except: pass
+
         token = JWT_auth.get_jwt(request)
         if token == None:
             request.user = AnonymousUser()
@@ -28,3 +37,16 @@ class AuthenticationMiddleware(MiddlewareMixin):
         request = sm.get_request()
         del sm
         return self.get_response(request)
+
+class ForceSessionSaveMiddleware(MiddlewareMixin):
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        response = self.get_response(request)
+
+        # Принудительно сохраняем сессию если она изменена
+        if hasattr(request, 'session') and request.session.modified:
+            request.session.save()
+
+        return response

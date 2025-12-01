@@ -1,0 +1,29 @@
+databases:
+  default:
+    ENGINE: django.db.backends.postgresql
+    NAME: main
+    USER: root
+    PASSWORD: root
+    HOST: db
+    PORT: 5432
+    OPTIONS: {}
+    TIME_ZONE: 'UTC'
+
+  tenant_template:
+    ENGINE: django.db.backends.postgresql
+    USER: root
+    PASSWORD: root
+    HOST: db
+    PORT: 5432
+    OPTIONS: {}
+    TIME_ZONE: 'UTC'
+    CONN_MAX_AGE: 0
+    ATOMIC_REQUESTS: false
+    AUTOCOMMIT: true
+    CONN_HEALTH_CHECKS: false
+    TEST:
+      NAME: null
+      MIRROR: null
+      DEPENDENCIES: [ ]
+      CHARSET: null
+      COLLATION: null

@@ -7,6 +7,6 @@ class BaseSecurityConfigrest_framework(AppConfig):
     verbose_name = "Приложение Безопасности"
     ordering = ['Encryption', 'Api_Keys', 'rest_framework', 'User']
 
-    def ready(self) -> None:
-        return super().ready()
+    def ready(self) -> None: return None
+
 

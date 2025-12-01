@@ -6,5 +6,5 @@ class EncryptionConfig(AppConfig):
     name = 'Encryption'
     verbose_name = "Encryption Application"
 
-    def ready(self) -> None:
-        pass
+    def ready(self) -> None: return None
+

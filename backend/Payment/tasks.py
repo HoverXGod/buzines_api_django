@@ -1,10 +1,10 @@
 from Payment.models import Payment
-from celery import shared_task
+from business_api.celery import app
 from datetime import datetime
 from Payment.services import get_method
 from Order.models import Order
 
-@shared_task(bind=True, name='Payment.tasks.check_payment_status')
+@app.task(bind=True)
 def check_payment_status(self, cls: type[str]) -> None:
 
     cls = Payment.objects.get(payment_id=cls)

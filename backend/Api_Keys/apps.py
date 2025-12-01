@@ -6,6 +6,6 @@ class ApiKeysConfig(AppConfig):
     verbose_name = "Менеджер API Ключей"
     ordering = ['Encryption', 'BaseSecurity', 'User']
 
-    def ready(self) -> None:
-        return super().ready()
+    def ready(self) -> None: return None
+
 

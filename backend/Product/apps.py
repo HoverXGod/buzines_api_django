@@ -6,3 +6,6 @@ class ProductConfig(AppConfig):
     name = 'Product'
     verbose_name = 'Менеджер Товаров'
     ordering = ['BaseSecurity']
+
+    def ready(self) -> None: return None
+

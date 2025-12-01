@@ -1,17 +1,5 @@
 services:
 # !zIkGbixtyFAza69feiAVsdzBGtHHbqtdQtPOuxtA
-  web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: 'python3 manage.py runserver 0.0.0.0:8000'
-    volumes:
-      - ./backend:/app
-    ports:
-      - "8000:8000"
-    networks:
-      - app-network
-
   db:
     image: postgres:latest
     environment:
@@ -47,11 +35,23 @@ services:
       - rabbitmq_data:/var/lib/rabbitmq
     networks:
           - app-network
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: 'python3 manage.py runserver 0.0.0.0:8000'
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    networks:
+      - app-network
+    restart: unless-stopped
 
   celery_worker:
     build: .
     working_dir: /app
-    command: celery -A business_api worker --loglevel=info --concurrency=4
+    command: celery -A business_api worker --loglevel=info --concurrency=1 -E
     volumes:
       - ./backend:/app
     environment:
@@ -65,26 +65,6 @@ services:
     restart: unless-stopped
     networks:
       - app-network
-
-    # Celery Beat для периодических задач
-#  celery_beat:
-#    build: .
-#    working_dir: /app
-#    command: celery -A business_api beat --loglevel=info
-#    volumes:
-#      - ./backend:/app
-#    environment:
-#      - DEBUG=1
-#      - DJANGO_SETTINGS_MODULE=business_api.settings
-#    depends_on:
-#      - redis
-#      - db
-#      - web
-#      - celery_worker
-#      - rabbitmq
-#    restart: unless-stopped
-#    networks:
-#      - app-network
 
 
 volumes:

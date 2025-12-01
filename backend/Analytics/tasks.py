@@ -1,11 +1,11 @@
-from celery import shared_task
+from business_api.celery import app
 from datetime import datetime
 from Payment.services import get_method
 from django.apps import apps
 from .models import *
 from .managers import *
 
-@shared_task(bind=True, name='Analytics.tasks.clv_update')
+@app.task(bind=True)
 def clv_update(self, cls: type[str]):
     clv = apps.get_model('Analytics.CustomerLifetimeValue')
     user = (apps.get_model('User.User')
@@ -22,7 +22,7 @@ def clv_update(self, cls: type[str]):
     clv.save()
     return clv
 
-@shared_task(bind=True, name='Analytics.tasks.sf_update')
+@app.task(bind=True)
 def sf_update(self, entry_id, **kwargs):
 
     sf = apps.get_model('Analytics.SalesFunnel')
@@ -44,7 +44,7 @@ def sf_update(self, entry_id, **kwargs):
     except Exception as e:
         raise ValueError(f"Error updating entry: {str(e)}")
 
-@shared_task(bind=True, name='Analytics.pp_update')
+@app.task(bind=True)
 def pp_update(self, instance_id, **kwargs):
     instance = (apps.get_model('Analytics.ProductPerformance')
           .objects.get(instance_id))
@@ -71,7 +71,7 @@ def pp_update(self, instance_id, **kwargs):
     instance.save()
     return instance
 
-@shared_task(bind=True, name='Analytics.tasks.payment_analysis')
+@app.task(bind=True)
 def payment_analysis(self, payment_id):
     payment = (apps.get_model("Payment.Payment")
                .objects.get(id = payment_id))
@@ -109,7 +109,7 @@ def payment_analysis(self, payment_id):
 
     return analysis
 
-@shared_task(bind=True, name='Analytics.tasks.cohort_analysis')
+@app.task(bind=True)
 def cohort_analysis(self):
     cohort_model_manager = CohortAnalysisManager()
     today = timezone.now().date()
@@ -139,7 +139,7 @@ def cohort_analysis(self):
         pass
     return cohort
 
-@shared_task(bind=True, name='Analytics.tasks.order_analysis')
+@app.task(bind=True)
 def order_analysis(self, order_id):
 
     order = (apps.get_model("Order.Order")
@@ -175,7 +175,7 @@ def order_analysis(self, order_id):
 
     return analytics
 
-@shared_task(bind=True, name='Analytics.tasks.order_item_analysis')
+@app.task(bind=True)
 def order_item_analysis(self, order_item_id, **extra_fields):
     order_item = (apps.get_model("Order.OrderItem")
              .objects.get(id = order_item_id))
