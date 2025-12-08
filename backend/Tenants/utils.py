@@ -5,6 +5,11 @@ from pathlib import Path
 from django.conf import settings
 from django.db import connections
 import subprocess
+from core.cache import cache_method
+import psycopg2
+from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from .tasks import _create_database_task
+from django.core.cache import cache
 
 # Thread-local storage для хранения текущей БД тенанта
 _thread_local = threading.local()
@@ -19,13 +24,12 @@ def set_current_tenant_db(db_name):
     """Устанавливает текущую базу данных тенанта"""
     _thread_local.tenant_db = db_name
 
-
 def clear_tenant_db():
     """Очищает текущую базу данных тенанта"""
     if hasattr(_thread_local, 'tenant_db'):
         del _thread_local.tenant_db
 
-
+@cache_method([],timeout=18*60*60)
 def load_tenants_config():
     """Загружает конфигурацию из tenants.yaml"""
     config_path = Path(__file__).resolve().parent.parent / 'tenants.yaml'
@@ -37,56 +41,40 @@ def get_tenant_db_name(domain):
     """Преобразует домен в имя базы данных"""
     return domain.replace('.', '_') + '_cloude'
 
+def db_exists(db_name: type[str]) -> bool:
+    base_config = load_tenants_config()['databases']['tenant_template'].copy()
+    conn: any = psycopg2.connect(
+        dbname='postgres',
+        user=base_config.get('USER', 'root'),
+        password=base_config.get('PASSWORD', 'root'),
+        host=base_config.get('HOST', 'localhost'),
+        port=base_config.get('PORT', 5432)
+    )
+    conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
+    cursor: any = conn.cursor()
 
-def create_database_if_not_exists(db_name, tenant_config):
+    # Проверяем существование базы
+    cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
+    exists = True if cursor.fetchone() else False
+
+    cursor.close()
+    conn.close()
+
+    if exists:
+        cache.set(db_name, "exists", timeout=18*60*60)
+        _add_database_to_settings(db_name, base_config)
+
+    return exists
+
+def create_database_if_not_exists(db_name):
     """Создает базу данных если она не существует"""
     # Для PostgreSQL
-    _create_postgres_database(db_name, tenant_config)
 
-
-def _create_postgres_database(db_name, tenant_config):
-    """Создает PostgreSQL базу данных"""
-    try:
-        import psycopg2
-        from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
-    except ImportError:
-        print("psycopg2 is required for PostgreSQL support")
-        return
-
-    base_config = tenant_config['tenant_template'].copy()
+    base_config = load_tenants_config()['databases']['tenant_template'].copy()
 
     try:
-        # Подключаемся к postgres для создания БД
-        conn = psycopg2.connect(
-            dbname='postgres',
-            user=base_config.get('USER', 'root'),
-            password=base_config.get('PASSWORD', 'root'),
-            host=base_config.get('HOST', 'localhost'),
-            port=base_config.get('PORT', 5432)
-        )
-        conn.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-        cursor = conn.cursor()
-
-        # Проверяем существование базы
-        cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s", (db_name,))
-        exists = cursor.fetchone()
-
-        if not exists:
-            print(f"Creating database: {db_name}")
-            cursor.execute(f'CREATE DATABASE "{db_name}"')
-            print(f"Database {db_name} created successfully")
-
-            # Добавляем БД в настройки Django
-            _add_database_to_settings(db_name, base_config)
-
-            # Запускаем миграции в фоне
-            _migrate_database(db_name)
-        else:
-            print(f"Database {db_name} already exists")
-            _add_database_to_settings(db_name, base_config)
-
-        cursor.close()
-        conn.close()
+        _create_database_task.delay(db_name)
+        _add_database_to_settings(db_name, base_config)
 
     except Exception as e:
         print(f"Error creating database {db_name}: {e}")
@@ -123,6 +111,7 @@ def _migrate_database(db_name):
         print(f"Error migrating database {db_name}: {e}")
 
 
+@cache_method([],timeout=20*60)
 def get_tenant_databases():
     """Возвращает все базы данных тенантов"""
     config = load_tenants_config()

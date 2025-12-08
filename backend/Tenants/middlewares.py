@@ -1,6 +1,6 @@
-from .utils import get_tenant_db_name, create_database_if_not_exists, load_tenants_config, set_current_tenant_db, \
-    clear_tenant_db
-
+from .utils import get_tenant_db_name, create_database_if_not_exists, set_current_tenant_db, \
+    clear_tenant_db, db_exists
+from django.core.cache import cache
 
 class TenantMiddleware:
     def __init__(self, get_response):
@@ -12,11 +12,15 @@ class TenantMiddleware:
 
         if domain:
             db_name = get_tenant_db_name(domain)
-            set_current_tenant_db(db_name)
 
-            # Проверяем и создаем БД если нужно
-            config = load_tenants_config()
-            create_database_if_not_exists(db_name, config['databases'])
+            if not cache.get(db_name):
+                if db_exists(db_name):
+                    set_current_tenant_db(db_name)
+                else:
+                    create_database_if_not_exists(db_name)
+                    raise RuntimeError("Creating database")
+            else:
+                set_current_tenant_db(db_name)
 
             # Добавляем информацию в request для использования в views
             request.tenant_db = db_name

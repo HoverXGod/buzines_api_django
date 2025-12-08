@@ -9,6 +9,6 @@ def order_create(request, order, product_dict=None):
     create_order_items_thread(order, product_dict).join()
 
     for item in order.items.all():
-        order_item_thread(item)
+        order_item_thread(item, request.tenant_db)
 
     order_thread(order, request)

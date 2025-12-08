@@ -68,10 +68,10 @@ class CustomerLifetimeValueManager(models.Manager):
             **clv_data
         )
 
-    def update_clv(self, user):
+    def update_clv(self, user, db_name):
         """Обновляет существующую запись CLV новыми вычисленными значениями"""
 
-        task = lv_update.delay(user.id)
+        task = clv_update.delay(user.id, db_name)
         return task.result
 
 class SalesFunnelManager(models.Manager):
@@ -101,11 +101,11 @@ class SalesFunnelManager(models.Manager):
         except Exception as e:
             raise ValueError(f"Error creating funnel entry: {str(e)}")
 
-    def update_entry(self, entry_id, **kwargs):
+    def update_entry(self, entry_id, db_name, **kwargs):
         """
         Обновление существующей записи
         """
-        task = sf_update.delay(entry_id, **kwargs)
+        task = sf_update.delay(entry_id, db_name, **kwargs)
         return task.result
 
     def get_entries(self, user=None, product=None, category=None, 
@@ -148,12 +148,12 @@ class PerformanceManager(models.Manager):
         entry = self.model(**entry_data)
         
         # Блокировка стандартного создания
-        entry.save(using=self._db)
+        entry.save()
         return entry
 
-    def update_entry(self, instance, **kwargs):
+    def update_entry(self, instance, db_name, **kwargs):
         """Обновление записи с перерасчетом метрик"""
-        task = pp_update.delay(instance.id, **kwargs)
+        task = pp_update.delay(instance.id, db_name, **kwargs)
         return task.result
 
     def _calculate_initial_metrics(self, product, date, data):
@@ -201,10 +201,10 @@ class PerformanceManager(models.Manager):
         return round(purchases / views * 100, 2) if views > 0 else 0.0
 
 class CohortAnalysisManager(models.Manager):
-    def add_entry(self):
+    def add_entry(self, db_name):
         """Автоматически создает запись когорты на основе вчерашних данных"""
         # Определяем даты
-        task = cohort_analysis.delay()
+        task = cohort_analysis.delay(db_name)
         return task.result
 
     def _get_primary_category(self, cohort_date, retention_day):
@@ -265,9 +265,10 @@ class CohortAnalysisManager(models.Manager):
         }
 
 class PaymentAnalysisManager(models.Manager):
-    def add_entry(self, payment):
+    def add_entry(self, payment, db_name):
         """Автоматически создает и заполняет анализ платежа"""
-        task = payment_analysis.delay(payment_id)
+        payment_id = payment.id
+        task = payment_analysis.delay(payment_id, db_name)
         return task.result
 
     def _calculate_gateway_performance(self, payment):
@@ -344,34 +345,9 @@ class OrderAnalyticsManager(models.Manager):
     def add_entry(self, order):
         """Создает или обновляет аналитическую запись для заказа"""
         # Вычисляем основные показатели
-        margin = self._calculate_margin(order)
-        acquisition_source = self._determine_acquisition_source(order)
-        customer_journey = self._analyze_customer_journey(order)
-        churn_risk = self._predict_churn_risk(order)
+        task = order_analysis.delay(order.id, db_name)
         
-        # Создаем или обновляем запись
-        analytics, created = self.get_or_create(
-            order=order,
-            defaults={
-                'margin': margin,
-                'acquisition_source': acquisition_source,
-                'customer_journey': customer_journey,
-                'predicted_churn_risk': churn_risk
-            }
-        )
-        
-        # Если запись существовала - обновляем данные
-        if not created:
-            analytics.margin = margin
-            analytics.acquisition_source = acquisition_source
-            analytics.customer_journey = customer_journey
-            analytics.predicted_churn_risk = churn_risk
-            analytics.save()
-        
-        # Анализируем товарные метрики
-        self._analyze_items(analytics)
-        
-        return analytics
+        return task.result
 
     def _calculate_margin(self, order):
         """Расчет маржинальности заказа"""
@@ -513,11 +489,11 @@ class InventoryTurnoverManager(models.Manager):
         return stockout_days
 
 class OrderItemAnalyticsManager(models.Manager):
-    def create_analytics(self, order_item, **extra_fields):
+    def create_analytics(self, order_item, db_name, **extra_fields):
         """
         Создает аналитическую запись с автоматическим расчетом показателей
         """
-        task = order_item_analysis
+        task = order_item_analysis.delay(order_item, db_name, **extra_fields)
         return task.result
     
     def _calculate_delivery_time(self, order_item):

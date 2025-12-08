@@ -232,10 +232,10 @@ class CohortAnalysis(models.Model):
             return round((self.metrics['active_users'] / self.metrics['total_users']) * 100, 2)
         return 0.0
     
-    def refresh_metrics(self):
+    def refresh_metrics(self, db_name):
         with transaction.atomic():
             self.delete()
-            new_entry = CohortAnalysis.objects.add_entry()
+            new_entry = CohortAnalysis.objects.add_entry(db_name)
             return new_entry
     
 class PaymentAnalysis(models.Model):

@@ -238,7 +238,7 @@ class CustomerLifetimeValueAdmin(admin.ModelAdmin):
         if object_id:
             obj = self.get_object(request, object_id)
             if obj:
-                CustomerLifetimeValue.objects.update_clv(obj.user)
+                CustomerLifetimeValue.objects.update_clv(obj.user, request.tenant_db)
         return super().changeform_view(request, object_id, form_url, extra_context)
     
     def get_chart_config(self, request):
@@ -467,7 +467,7 @@ class CohortAnalysisAdmin(admin.ModelAdmin):
 
     def refresh_metrics(self, request, queryset):
         for obj in queryset:
-            obj.refresh_metrics()
+            obj.refresh_metrics(request.tenant_db)
         self.message_user(request, f"Обновлено {queryset.count()} записей")
     refresh_metrics.short_description = 'Обновить метрики для выбранных когорт'
 
@@ -740,7 +740,7 @@ class OrderAnalyticsAdmin(admin.ModelAdmin):
     
     def recalculate_metrics(self, request, queryset):
         for obj in queryset:
-            OrderAnalytics.objects.add_entry(obj.order)
+            OrderAnalytics.objects.add_entry(obj.order, request.tenant_db)
         self.message_user(request, f"Обновлено {queryset.count()} записей")
     recalculate_metrics.short_description = 'Пересчитать метрики'
     

@@ -93,7 +93,7 @@ class loginUser(APIView):
 
         jwt_token, request = User.login_user_by_password(request, login=login, password=password)
 
-        call_command('init_cohort')
+        call_command('init_cohort', db_name=request.tenant_db)
 
         if not jwt_token: return SecureResponse(request=request, status=400)
         else: return SecureResponse(request=request, data={"JWTCloudeToken":jwt_token}, status=200)

@@ -64,7 +64,7 @@ class Payment(models.Model):
 
         return this_payment
 
-    def check__status(self): 
+    def check__status(self, db_name):
         """Проверка и обновление статуса платежа"""
 
         method_answer = get_method(self.method, self.payment_id).check_status()
@@ -79,7 +79,7 @@ class Payment(models.Model):
             UserSubscriptionItem.check_all_user_subscriptions(self.user)
 
             from Analytics.models import PaymentAnalysis
-            PaymentAnalysis.objects.add_entry(self)
+            PaymentAnalysis.objects.add_entry(self, db_name)
         else: raise ZeroDivisionError
 
         return method_answer

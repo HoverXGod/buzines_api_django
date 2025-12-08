@@ -4,7 +4,8 @@ from core import context_thread
 def order_thread(order, request):
     from Analytics.models import SalesFunnel, CustomerLifetimeValue,OrderAnalytics
 
-    CustomerLifetimeValue.objects.update_clv(user = request.user)
+    CustomerLifetimeValue.objects.update_clv(user=request.user,
+                                             db_name=request.tenant_db)
 
     for item in order.items.all():
 
@@ -17,7 +18,7 @@ def order_thread(order, request):
                 )
         except :pass
 
-    OrderAnalytics.objects.add_entry(order)
+    OrderAnalytics.objects.add_entry(order, request.tenant_db)
         
     from django.core.management import call_command
     call_command('init_cohort')

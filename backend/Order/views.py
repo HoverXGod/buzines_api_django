@@ -81,6 +81,7 @@ class StartOrder(APIView):
                 user_id=request.user.id,
                 promo="",
                 method_name=request.GET['method_name'],
+                db_name=request.tenant_db
             )
             if task.ready():
                 task_data = task.result
@@ -98,6 +99,7 @@ class StartOrder(APIView):
                             user_id=request.user.id,
                             promo="",
                             method_name=request.GET['method_name'],
+                            db_name=request.tenant_db
                             )
                 if task.ready():
                    task_data = task.result

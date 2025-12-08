@@ -109,7 +109,7 @@ class Order(models.Model):
         Cart.delete_user_cart(user)
 
         from Payment.tasks import check_payment_status
-        check_payment_status.delay(payment.payment_id)
+        check_payment_status.delay(payment.payment_id, request.tenant_db)
 
         return order
 
