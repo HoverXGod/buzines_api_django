@@ -1,5 +1,4 @@
 from Encryption.utils import Encryption
-from BaseSecurity.utils import Key_Generator
 from datetime import datetime
 from django.db import models
 from User.models import User
@@ -27,7 +26,7 @@ class Api_key(models.Model):
     def save(self, *args, **kwargs):
         """Переопределяем метод Save() для автоматического шифрования ключа"""
         
-        if self.key_value: 
+        if not isinstance(self.key_value, bytes):
             self.key_value = Encryption.encrypt_data(self.key_value)
         
         super().save(*args, **kwargs)
@@ -59,7 +58,8 @@ class Api_key(models.Model):
     
     def update_key_random(self): 
         """Обновление ключа на рандомный другой"""
-        
+        from BaseSecurity.utils import Key_Generator
+
         key = Key_Generator.generate_base_api_key()
         self.key_value = key
         self.updated_at = datetime.now().__str__()

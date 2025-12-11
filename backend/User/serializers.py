@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         depth = 1
-        fields = ['id', 'username', 'email', 'last_login', 'address','date_joined', 'isAdministrator', 'isModerator', 'is_superuser', 'phone_number', 'currency', 'user_type']
+        fields = ['id', 'first_name', 'last_name', 'username', 'email', 'address', 'date_joined', 'phone_number', 'currency', 'user_type']
 
 class UserGroupSerializer(serializers.ModelSerializer):
     class Meta:

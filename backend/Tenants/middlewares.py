@@ -8,10 +8,9 @@ class TenantMiddleware:
 
     def __call__(self, request):
         # Получаем домен из заголовка
-        domain = request.META.get('HTTP_X_DOMAIN')
 
-        if domain:
-            db_name = get_tenant_db_name(domain)
+        if hasattr(request.META, 'HTTP_X_DOMAIN'):
+            db_name = get_tenant_db_name(request.META.get('HTTP_X_DOMAIN'))
 
             if not cache.get(db_name):
                 if db_exists(db_name):
@@ -24,7 +23,7 @@ class TenantMiddleware:
 
             # Добавляем информацию в request для использования в views
             request.tenant_db = db_name
-            request.tenant_domain = domain
+            request.tenant_domain = request.META.get('HTTP_X_DOMAIN')
         else:
             # Используем default базу данных
             set_current_tenant_db('default')

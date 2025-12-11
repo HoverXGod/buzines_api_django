@@ -1,5 +1,7 @@
 from Encryption.utils import Encryption
-
+from Api_Keys.utils import ApiManager
+from core.cache import cache_method
+from django.core.cache import cache
 class Key_Generator:
 
     @staticmethod
@@ -75,13 +77,15 @@ class JWT_auth:
 
         return JWT_auth._decompile_jwt_token_str(jwt_token).split(";")
 
+    @cache_method(use_models=[], timeout=60*15, cache_exceptions=False)
     @staticmethod
     def verify_jwt_token(jwt_token: str) -> bool: 
         """Проверка соответсвия подписи нашей"""
 
         baseJWT = JWT_auth._decompile_jwt_token_str(jwt_token).split(";")
         return baseJWT[::-1][0] == Encryption.sign.decode()
-    
+
+    @cache_method(use_models=[], timeout=60*5, cache_exceptions=False)
     @staticmethod
     def get_user_permissions(jwt_token: str) -> list:
         """Получаем права пользователя из JWT Токена"""
@@ -126,53 +130,51 @@ class JWT_auth:
         from User.models import User
 
         jwt = JWT_auth._decompile_jwt_token_list(jwt_token=jwt_token)
-        user_id = jwt[0]
-
-        user = None
 
         try:
-            user = User.objects.get(id=user_id)
-        except: pass
-
-        return user
+            cache.set(jwt_token, jwt[0], timeout=5*60)
+            return User.objects.get(id=jwt[0])
+        except: return None
 
     @staticmethod
-    def get_jwt(request) -> str:
+    def get_jwt(request) -> type(str | None):
         """Получение JWT или JAT токена из request"""
-        try:
-            return dict(request.session.items())['JWTCloudeToken']
-        except:
-            try:
-                return dict(request.META.items())['HTTP_JWTCLOUDETOKEN']
-            except:
-                try:
-                    return request.COOKIES['JWTCloudeToken']
-                except:
-                    try:
-                        return request.GET['JWTCloudeToken']
-                    except:
-                        try:
-                            from Api_Keys.utils import ApiManager
-                            return ApiManager.get_api_key(api_key=request.META['API key'])._generate_jat()
-                        except: return None
+        if hasattr(request.session.items(), 'JWTCloudeToken'):
+            return request.session['JWTCloudeToken']
+
+        elif hasattr(request.META.items(), 'HTTP_JWTCLOUDETOKEN'):
+            return request.META['HTTP_JWTCLOUDETOKEN']
+
+        elif hasattr(request.COOKIES, 'JWTCloudeToken'):
+            return request.COOKIES['JWTCloudeToken']
+
+        elif hasattr(request.GET, 'JWTCloudeToken'):
+            return request.GET['JWTCloudeToken']
+
+        elif hasattr(request.META.items(), 'HTTP_APIKEY'):
+            return ApiManager.get_api_key(api_key=request.META['HTTP_APIKEY'])._generate_jat()
+
+        return None
 
     @staticmethod 
-    def get_jwt_super(request) -> str:
+    def get_jwt_super(request) -> type(str | None):
         """Получение JWT super или JAT super токена из request"""
+        if hasattr(request.session.items(), 'JWTCloudeToken'):
+            return request.session['JWTCloudeToken']
 
-        try:
-            return dict(request.session.items())['JWTCloudeToken']
-        except:
-            try: 
-                return dict(request.META.items())['HTTP_JWTCLOUDETOKEN']
-            except:
-                try:
-                    return request.COOKIES['JWTCloudeToken']
-                except:
-                    try:
-                        from Api_Keys.utils import ApiManager
-                        return ApiManager.get_super_api_key(api_key=request.META['API key'])._generate_jat()
-                    except: return None
+        elif hasattr(request.META.items(), 'HTTP_JWTCLOUDETOKEN'):
+            return request.META['HTTP_JWTCLOUDETOKEN']
+
+        elif hasattr(request.COOKIES, 'JWTCloudeToken'):
+            return request.COOKIES['JWTCloudeToken']
+
+        elif hasattr(request.GET, 'JWTCloudeToken'):
+            return request.GET['JWTCloudeToken']
+
+        elif hasattr(request.META.items(), 'HTTP_APIKEY'):
+            return ApiManager.get_super_api_key(api_key=request.META['HTTP_APIKEY'])._generate_jat()
+
+        return None
 
 def get_client_ip(request):
     # Список возможных заголовков, в которых может быть IP

@@ -1,6 +1,7 @@
 from BaseSecurity.services import SessionManager
 from django.contrib.auth.models import AnonymousUser
 from django.utils.deprecation import MiddlewareMixin
+from django.core.cache import cache
 from BaseSecurity.utils import JWT_auth
 from .models import User
 
@@ -9,19 +10,31 @@ class AuthenticationMiddleware(MiddlewareMixin):
         self.get_response = get_response
 
     def __call__(self, request):
-        if hasattr(request, 'session'):
-            try:
-                request.user = User.objects.get(pk=request.session['_auth_user_id'])
-                return self.get_response(request)
-            except: pass
+        if hasattr(request.session.items(), '_auth_user_id'):
+            request.user = User.objects.get(pk=request.session['_auth_user_id'])
+            return self.get_response(request)
 
         token = JWT_auth.get_jwt(request)
-        if token == None:
+        if not token:
             request.user = AnonymousUser()
             return self.get_response(request)
 
+        else:
+            cache_id = cache.get(token)
+            if cache_id:
+                sm = SessionManager(request)
+                request.user = User.objects.get(pk=cache_id)
+                request.user.is_active = True
+                request.user.save()
+
+                sm.auth__session()
+                sm.auth__user(request.user)
+                sm.auth__token(token)
+                request = sm.get_request()
+                del sm
+                return self.get_response(request)
+
         sm = SessionManager(request)
-        sm.auth__token(token)
 
         if JWT_auth.verify_jwt_token(token):
             user = JWT_auth.jwt_to_user(jwt_token=token)
@@ -34,6 +47,7 @@ class AuthenticationMiddleware(MiddlewareMixin):
             user = AnonymousUser()
 
         sm.auth__user(user)
+        sm.auth__token(token)
         request = sm.get_request()
         del sm
         return self.get_response(request)

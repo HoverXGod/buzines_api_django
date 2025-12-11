@@ -15,14 +15,14 @@ class GetProductsCategory(APIView):
     permission_classes = []
     serializer_class = ProductSerializer
 
-    @method_decorator(cache_api_view(use_models=[Category]))
+    @method_decorator(cache_api_view(use_models=[Category, Product]))
     def get(self, request):
         category_name = request.GET['category_name']
 
         if request.user.is_authenticated:
             try:
                 CustomerBehavior.objects.get(user = request.user).add_view()
-            except: pass
+            except: CustomerBehavior.objects.create(user=user)
         try:    
             return SecureResponse(
                 request=request,
@@ -49,7 +49,7 @@ class GetAllProducts(APIView):
         if request.user.is_authenticated:
             try:
                 CustomerBehavior.objects.get(user = request.user).add_view()
-            except: pass
+            except: CustomerBehavior.objects.create(user=user)
         return SecureResponse(
             request=request,
             data=self.serializer_class(
@@ -69,7 +69,9 @@ class GetProduct(APIView):
     def get(self, request):
         product_id = request.GET['product_id']
         if request.user.is_authenticated:
-            CustomerBehavior.objects.get(user = request.user).add_view()
+            try:
+                CustomerBehavior.objects.get(user = request.user).add_view()
+            except: CustomerBehavior.objects.create(user=user)
 
         try: item = Product.objects.get(
                         id=product_id
@@ -111,20 +113,15 @@ class UpdateProduct(APIView):
     serializer_class = ProductSerializer
 
     def get(self, request):
-        try:
-            try: name = request.GET['name']
-            except: name = None
-            try: price = request.GET['price']
-            except: price = None
-            try: description = request.GET['description']
-            except: description = None
-            try: product_id = request.GET['id']
-            except: return SecureResponse(request=request, status=400)
-            pr = Product.objects.get(id=product_id)
-            pr = pr.update_product(self, name=name, description=description, price=price)
+        name = request.GET.get(['name'], None)
+        price = request.GET.get(['price'], None)
+        description = request.GET.get(['description'], None)
 
-        except: return SecureResponse(request=request,status=400)
-        return SecureResponse(request=request)
+        if hasattr(request.GET, 'product_id'):
+            (Product.objects.get(id=request.GET['product_id']).
+                  update_product(self, name=name, description=description, price=price))
+
+        else: return SecureResponse(request=request, status=404)
 
 class CreateProduct(APIView): 
     
@@ -132,23 +129,20 @@ class CreateProduct(APIView):
     serializer_class = ProductSerializer
 
     def get(self, request):
-        try:
-            weigth = request.GET['by_weigth']
-            name = request.GET['name']
-            description = request.GET['description']
-            price = request.GET['price']
-            category = Category.objects.get(name=request.GET['category_name'])
+        name = request.GET['name']
+        description = request.GET['description']
+        price = request.GET['price']
+        category = Category.objects.get(name=request.GET['category_name'])
 
-            if int(weigth) == 1:
-                weight = request.GET['weight']
-                weight_start = request.GET['weight_start']
-                weight_end = request.GET['weight_end']
-                pr = Product.create_product(name, description, price, category, weight, weight_start, weight_end)
-            else:
-                pr = Product.create_product(name, description, price, category)
+        if hasattr(request.GET, 'weight'):
+            weight = request.GET['weight']
+            weight_start = request.GET['weight_start']
+            weight_end = request.GET['weight_end']
+            pr = Product.create_product(name, description, price, category, weight, weight_start, weight_end)
+        else:
+            pr = Product.create_product(name, description, price, category)
 
-            call_command('init_performance')
-        except: return SecureResponse(request=request, status=400)
+        call_command('init_performance')
         
         return SecureResponse(request=request,data=self.serializer_class(instance=pr).data, status=200)   
 

@@ -1,9 +1,11 @@
 ALLOWED_HOSTS_LOCAL = ['*']
 INSTALLED_APPS_LOCAL = [
     'debug_toolbar',
+    'silk'
 ]
 MIDDLEWARE_LOCAL = [
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'silk.middleware.SilkyMiddleware',
     ]
 INTERNAL_IPS = [
     '127.0.0.1',

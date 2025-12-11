@@ -75,6 +75,7 @@ def create_database_if_not_exists(db_name):
     try:
         _create_database_task.delay(db_name)
         _add_database_to_settings(db_name, base_config)
+        cache.set(db_name, "exists", timeout=18 * 60 * 60)
 
     except Exception as e:
         print(f"Error creating database {db_name}: {e}")

@@ -20,6 +20,7 @@ SECRET_KEY = 'django-insecure-a*r&lh632^x%a%3omvtgmny**vezl4791re_x#-+nm=((#gj%d
 
 # SECURITY WARNING: don't run with debug turned on in production!
 
+
 DEBUG = True
 
 ALLOWED_HOSTS = []
@@ -100,7 +101,8 @@ MIDDLEWARE = [
     'django_user_agents.middleware.UserAgentMiddleware',
 ]
 
-REST_FRAMEWORK = {       
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': ['rest_framework.renderers.JSONRenderer'],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema', 
 }
 

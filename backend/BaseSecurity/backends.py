@@ -7,9 +7,10 @@ class AuthenticateLogin(BaseBackend):
 
         try:
             token, _ = User.login_user_by_password(request, login=username, password=password)
-        except:  return None
+        except:
+            return None
 
-        return JWT_auth.jwt_to_user(token) if not token == None else None
+        return JWT_auth.jwt_to_user(token) if token else None
     
     def get_user(self, user_id):
         try:
@@ -22,11 +23,13 @@ class AuthenticateLogin(BaseBackend):
 
 
 class AuthenticateToken(BaseBackend):
-    def authenticate(self, request, token=None): 
-        try: return JWT_auth.jwt_to_user(jwt_token=token)
-        except:
-            try: return JWT_auth.jwt_to_user(jwt_token=JWT_auth.get_jwt(request=request))
-            except: return None
+    def authenticate(self, request, token=None):
+        if not token:
+            token = JWT_auth.get_jwt(request=request)
+            if not token:
+                return None
+
+        return JWT_auth.jwt_to_user(jwt_token=token)
         
     def get_user(self, user_id):
         try:

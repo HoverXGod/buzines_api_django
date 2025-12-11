@@ -1,19 +1,19 @@
 from django.core.management.base import BaseCommand
-from django.contrib.auth import get_user_model
+from django.apps import apps
 
 class Command(BaseCommand):
     help = ''
 
     def handle(self, *args, **options):
         try:
-            user_model = get_user_model()
+            user_model = apps.get_model("User.User")
 
             try:
                 admin_user = user_model.objects.get(username="admin")
-                admin_user.password = "admin"
+                admin_user.password = "123"
                 admin_user.super_user = True
             except:
-                admin_user = User.register_user("admin", "admin", "admin")
+                admin_user = user_model.register_user("admin", "123", "admin")
                 admin_user.super_user = True
-        except:
-                pass
+
+        except Exception as e: print(e)

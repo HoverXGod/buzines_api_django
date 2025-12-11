@@ -191,21 +191,20 @@ class User(AbstractUser):
 
         try: 
             user = User.objects.get(username=login)
-        except:
-            return None
+        except self.DoesNotExist:
+            return None, request
         
         user_acc_password = Encryption.decrypt_data(user.base_password)
 
-        if user_acc_password != password: return None
+        if user_acc_password != password: return None, request
 
         jwt_token = JWT_auth.compile_jwt_token(user)
 
         user.last_login = datetime.now().__str__()
         user.save()
-        try:
-            request.COOKIES['JWTCloudeToken'] = jwt_token
-        finally:
-            request.token = jwt_token
+
+        if hasattr(request.COOKIES, "JWTCloudeToken"):
+            request.token = request.COOKIES['JWTCloudeToken']
 
         from Product.models import UserSubscriptionItem
         UserSubscriptionItem.check_all_user_subscriptions(user)

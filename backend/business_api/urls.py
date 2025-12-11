@@ -16,10 +16,12 @@ urlpatterns = [
     path('', include('Product.urls')),
     path('', include('Order.urls')),
     path('', include('Payment.urls')),
+    path('', include('Tenants.urls')),
 ]
 
 if DEBUG:
     try:
         from debug_toolbar.toolbar import debug_toolbar_urls
         urlpatterns += debug_toolbar_urls()
+        urlpatterns += [path('silk/', include('silk.urls', namespace='silk'))]
     except: pass

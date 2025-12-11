@@ -7,13 +7,13 @@ class SecureResponse(Response):
 
         if status != 201 and status != 200:
             if data == None or data == '' or data == ' ' or status == 500:
-                data = 'InteralApiError'
+                data = 'Interal-Api-Error'
             elif status == 400:
-                data = {"BadRequest": data}
+                data = {"Bad-Request": data}
             elif status == 403:
-                data = {"PermissionError": data}
+                data = {"Permission-Error": data}
             elif status == 403 and not request.user.is_authenticated:
-                data = 'User is not autorized'
+                data = 'Authorizing-Error'
                 status = 401
 
         if request:

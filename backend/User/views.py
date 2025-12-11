@@ -100,21 +100,18 @@ class loginUser(APIView):
 
 class MyProfile(APIView):
 
-    serializer_classes = [UserSerializer, ApiKeySerializer, UserGroupSerializer]
+    serializer_classes = [UserSerializer, UserGroupSerializer]
     permission_classes = [isAutorized]
 
     @method_decorator(cache_api_view(use_models=[User]))
     def get(self, request):
         user = request.user
 
-        api_keys = Api_key.objects.filter(user=user)
-
         return SecureResponse(
             request=request, 
             data={ 
-                'User data': self.serializer_classes[0](instance=user).data, 
-                'API keys': self.serializer_classes[1](instance=api_keys, many=True).data,
-                'User groups': self.serializer_classes[2](instance=UserGroup.get_user_groups__list(user), many=True).data
+                'User data': self.serializer_classes[0](instance=user).data,
+                'User groups': self.serializer_classes[1](instance=UserGroup.get_user_groups__list(user), many=True).data
             }, status=200
             )
 
@@ -149,29 +146,19 @@ class EditProfileUser(APIView):
 
     def get(self, request):
         user = request.user
-        user_id = request.user.id
 
-        try: phone_number = request.GET['phone_number']
-        except: phone_number = None
-        try: address = request.GET['address']
-        except: address = None
-        try: password = request.GET['password']
-        except: password = None
-        try: username = request.GET['username']
-        except: username = None
-        try: email = request.GET['email']
-        except: email = None
-        try: old_password = request.GET['old_password']
-        except: old_password = None
-        try: first_name = request.GET['first_name']
-        except: first_name = None
-        try: last_name = request.GET['last_name']
-        except: last_name = None
+        phone_number = request.GET.get(['phone_number'], None)
+        address = request.GET.get(['address'], None)
+        password = request.GET.get(['password'], None)
+        username = request.GET.get(['username'], None)
+        email = request.GET.get(['email'], None)
+        old_password = request.GET.get(['old_password'], None)
+        first_name = request.GET.get(['first_name'], None)
+        last_name = request.GET.get(['last_name'], None)
 
         answer = user.edit_profile(address=address, last_name=last_name, first_name=first_name, name=username, old_pasword=old_password, password=password, email=email, phone_number=phone_number)
-        if answer: 
-            user = User.objects.get(id=user_id)
-            return SecureResponse(request=request, data={"User data": self.serializer_class(instance=user).data}, status=200)
+        if answer:
+            return SecureResponse(request=request, data={"successful"}, status=200)
         else: return SecureResponse(request=request, status=400)
 
 class SetSuperUser(APIView):
